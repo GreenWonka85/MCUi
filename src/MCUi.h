@@ -1,5 +1,5 @@
 /*
-  MCUBench - show measurements from your microcontroller in the MCU Bench app.
+  MCUi - show measurements from your microcontroller in the MCU Instruments app.
 
   Protocol: docs/PROTOCOL.md
   License:  MIT
@@ -9,18 +9,18 @@
 
   Minimal example:
 
-    #include <MCUBench.h>
-    MCUBench bench;
+    #include <MCUi.h>
+    MCUi mcui;
 
     void setup() {
-      bench.addChannel("V", "Voltage", "voltage");
-      bench.setRange("V", 0, 30);
-      bench.begin("My Voltmeter");
+      mcui.addChannel("V", "Voltage", "voltage");
+      mcui.setRange("V", 0, 30);
+      mcui.begin("My Voltmeter");
     }
 
     void loop() {
-      bench.set("V", readVoltage());
-      bench.update();
+      mcui.set("V", readVoltage());
+      mcui.update();
     }
 
   Important: keys, names, units, groups and option lists are stored as
@@ -32,26 +32,26 @@
 #include <Arduino.h>
 
 #if !defined(ESP32)
-#error "MCUBench 0.1 supports ESP32 boards only. Other boards follow in a later version."
+#error "MCUi 0.1 supports ESP32 boards only. Other boards follow in a later version."
 #endif
 
-#ifndef MCUBENCH_MAX_CHANNELS
-#define MCUBENCH_MAX_CHANNELS 24
+#ifndef MCUI_MAX_CHANNELS
+#define MCUI_MAX_CHANNELS 24
 #endif
 
-#ifndef MCUBENCH_MAX_CONTROLS
-#define MCUBENCH_MAX_CONTROLS 16
+#ifndef MCUI_MAX_CONTROLS
+#define MCUI_MAX_CONTROLS 16
 #endif
 
-#define MCUBENCH_PROTOCOL_VERSION 1
-#define MCUBENCH_LIBRARY_VERSION "0.1.0"
+#define MCUI_PROTOCOL_VERSION 1
+#define MCUI_LIBRARY_VERSION "0.1.0"
 
-class MCUBench {
+class MCUi {
 public:
   /** Called when the app changes a control. value is the new value as text. */
   typedef void (*ControlCallback)(const char *key, const char *value);
 
-  MCUBench();
+  MCUi();
 
   // ------------------------------------------------------------ Setup
   /** Starts Bluetooth LE. Call after defining channels and controls. */
@@ -161,14 +161,14 @@ private:
   void handleLine(char *line);
   static uint8_t defaultDecimals(const char *type);
 
-  Channel _channels[MCUBENCH_MAX_CHANNELS];
-  Control _controls[MCUBENCH_MAX_CONTROLS];
+  Channel _channels[MCUI_MAX_CHANNELS];
+  Control _controls[MCUI_MAX_CONTROLS];
   uint8_t _channelCount = 0;
   uint8_t _controlCount = 0;
   const char *_options[4][2];
   uint8_t _optionCount = 0;
 
-  const char *_name = "MCU Bench";
+  const char *_name = "MCU Instruments";
   const char *_firmware = nullptr;
   char _id[13];
   uint32_t _interval = 200;

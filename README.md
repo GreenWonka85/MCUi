@@ -1,6 +1,6 @@
-# MCUBench
+# MCUi
 
-Arduino library for the **MCU Bench** app: show measurements from your microcontroller on your phone or tablet as analog gauges, digital displays, power supply panels and sensor tiles, and control your device from the app.
+Arduino library for the **MCU Instruments** app (short: MCUi): show measurements from your microcontroller on your phone or tablet as analog gauges, digital displays, power supply panels and sensor tiles, and control your device from the app.
 
 *Deutsch: siehe unten.*
 
@@ -18,29 +18,29 @@ Bluetooth Classic, Wi-Fi and further boards follow in later versions.
 ## Installation
 
 1. Arduino IDE: *Sketch > Include Library > Add .ZIP Library...* and select the ZIP of this repository (*Code > Download ZIP* on GitHub).
-   Or copy the folder into `Documents/Arduino/libraries/MCUBench`.
+   Or copy the folder into `Documents/Arduino/libraries/MCUi`.
 2. ESP32 board package (Espressif) version 2.0.11 or newer, 3.x recommended.
 
 ## Quick start
 
 ```cpp
-#include <MCUBench.h>
+#include <MCUi.h>
 
-MCUBench bench;
+MCUi mcui;
 
 void setup() {
-  bench.addChannel("V", "Voltage", "voltage");
-  bench.setRange("V", 0, 30);
-  bench.begin("My Voltmeter");
+  mcui.addChannel("V", "Voltage", "voltage");
+  mcui.setRange("V", 0, 30);
+  mcui.begin("My Voltmeter");
 }
 
 void loop() {
-  bench.set("V", analogReadMilliVolts(34) / 1000.0 * 11);
-  bench.update();
+  mcui.set("V", analogReadMilliVolts(34) / 1000.0 * 11);
+  mcui.update();
 }
 ```
 
-Open the MCU Bench app, tap *Search*, select "My Voltmeter". Done.
+Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 
 ## Examples
 
@@ -78,7 +78,7 @@ MIT, see [LICENSE](LICENSE).
 
 ## Deutsch
 
-Arduino-Bibliothek für die App **MCU Bench**: Messwerte vom Mikrocontroller auf Smartphone oder Tablet als Analoganzeige, Digitalanzeige, Netzteil-Ansicht oder Sensor-Kachel anzeigen und das Gerät aus der App bedienen.
+Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom Mikrocontroller auf Smartphone oder Tablet als Analoganzeige, Digitalanzeige, Netzteil-Ansicht oder Sensor-Kachel anzeigen und das Gerät aus der App bedienen.
 
 **Installation:** In der Arduino IDE *Sketch > Bibliothek einbinden > .ZIP-Bibliothek hinzufügen...* und das ZIP dieses Repositories wählen. Benötigt wird das ESP32-Boardpaket von Espressif ab Version 2.0.11, empfohlen 3.x.
 

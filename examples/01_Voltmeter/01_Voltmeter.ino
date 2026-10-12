@@ -1,8 +1,8 @@
 /*
-  MCU Bench example 01: Voltmeter
+  MCU Instruments example 01: Voltmeter
 
   Measures a voltage at an analog pin through a voltage divider and shows
-  it in the MCU Bench app as an analog gauge or digital display.
+  it in the MCU Instruments app as an analog gauge or digital display.
 
   Wiring (example for up to approx. 30 V):
 
@@ -17,25 +17,25 @@
   Board: any ESP32 with Bluetooth (ESP32, ESP32-S3, ESP32-C3, ESP32-C6).
   For ESP32-C3/C6/S3 choose an ADC pin of your board (e.g. GPIO 2 or 4).
 */
-#include <MCUBench.h>
+#include <MCUi.h>
 
 const int ADC_PIN = 34;
 const float R1 = 100000.0;  // Ohm, upper resistor
 const float R2 = 10000.0;   // Ohm, lower resistor
 const float DIVIDER = (R1 + R2) / R2;
 
-MCUBench bench;
+MCUi mcui;
 
 void setup() {
   Serial.begin(115200);
 
-  bench.addChannel("V", "Voltage", "voltage");
-  bench.setRange("V", 0, 30);
-  bench.setDecimals("V", 2);
+  mcui.addChannel("V", "Voltage", "voltage");
+  mcui.setRange("V", 0, 30);
+  mcui.setDecimals("V", 2);
 
-  bench.setFirmware("1.0");
-  bench.begin("MCU Voltmeter");
-  Serial.println("MCU Bench: waiting for the app ...");
+  mcui.setFirmware("1.0");
+  mcui.begin("MCU Voltmeter");
+  Serial.println("MCUi: waiting for the app ...");
 }
 
 void loop() {
@@ -44,7 +44,7 @@ void loop() {
   for (int i = 0; i < 16; i++) sum += analogReadMilliVolts(ADC_PIN);
   float volts = (sum / 16.0) / 1000.0 * DIVIDER;
 
-  bench.set("V", volts);
-  bench.update();
+  mcui.set("V", volts);
+  mcui.update();
   delay(10);
 }

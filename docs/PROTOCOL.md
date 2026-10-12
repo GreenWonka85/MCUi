@@ -1,9 +1,9 @@
-# MCU Bench Protocol, Version 1
+# MCU Instruments Protocol, Version 1
 
-This document describes how a microcontroller talks to the MCU Bench app.
+This document describes how a microcontroller talks to the MCU Instruments app.
 The protocol is plain text, line based and identical on every transport
 (Bluetooth LE, Bluetooth Classic, Wi-Fi). Any device that follows it works
-with the app, with or without the MCU Bench Arduino library.
+with the app, with or without the MCU Instruments Arduino library.
 
 Status: draft 1, October 2026.
 
@@ -210,7 +210,7 @@ Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lin
 
 ### 6.3 Wi-Fi
 
-TCP, port `4210`. Discovery via mDNS service `_mcubench._tcp`. Same lines as above.
+TCP, port `4210`. Discovery via mDNS service `_mcui._tcp`. Same lines as above.
 (Specified for version 1, implemented in a later app release.)
 
 ## 7. Example: dual power supply

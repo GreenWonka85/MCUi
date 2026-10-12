@@ -1,5 +1,5 @@
 /*
-  MCU Bench example 02: Lab power supply (Labornetzteil)
+  MCU Instruments example 02: Lab power supply (Labornetzteil)
 
   Shows a power supply in the app: voltage and current with setpoint
   marks, CV/CC indicator, output switch and sliders for the setpoints.
@@ -11,9 +11,9 @@
 
   Board: any ESP32 with Bluetooth.
 */
-#include <MCUBench.h>
+#include <MCUi.h>
 
-MCUBench bench;
+MCUi mcui;
 
 // Simulated load in Ohm
 const float LOAD_OHM = 8.0;
@@ -28,39 +28,39 @@ void setup() {
   Serial.begin(115200);
 
   // Measured values
-  bench.addChannel("V", "Voltage", "voltage");
-  bench.setRange("V", 0, 30);
-  bench.setDecimals("V", 2);
+  mcui.addChannel("V", "Voltage", "voltage");
+  mcui.setRange("V", 0, 30);
+  mcui.setDecimals("V", 2);
 
-  bench.addChannel("I", "Current", "current");
-  bench.setRange("I", 0, 5);
-  bench.setDecimals("I", 3);
+  mcui.addChannel("I", "Current", "current");
+  mcui.setRange("I", 0, 5);
+  mcui.setDecimals("I", 3);
 
-  bench.addChannel("MODE", "Mode", "psu_mode");
+  mcui.addChannel("MODE", "Mode", "psu_mode");
 
   // Setpoints as marks on the gauges
-  bench.addChannel("VS", "Voltage set", "voltage");
-  bench.setRange("VS", 0, 30);
-  bench.setSetpointOf("VS", "V");
+  mcui.addChannel("VS", "Voltage set", "voltage");
+  mcui.setRange("VS", 0, 30);
+  mcui.setSetpointOf("VS", "V");
 
-  bench.addChannel("IS", "Current limit", "current");
-  bench.setRange("IS", 0, 5);
-  bench.setSetpointOf("IS", "I");
+  mcui.addChannel("IS", "Current limit", "current");
+  mcui.setRange("IS", 0, 5);
+  mcui.setSetpointOf("IS", "I");
 
   // Controls
-  bench.addSwitch("OUT", "Output", false);
-  bench.addSlider("VSET", "Voltage", 0, 30, 0.1, 12.0, "V");
-  bench.addSlider("ISET", "Current limit", 0, 5, 0.01, 1.0, "A");
-  bench.onControl(onControl);
+  mcui.addSwitch("OUT", "Output", false);
+  mcui.addSlider("VSET", "Voltage", 0, 30, 0.1, 12.0, "V");
+  mcui.addSlider("ISET", "Current limit", 0, 5, 0.01, 1.0, "A");
+  mcui.onControl(onControl);
 
-  bench.setFirmware("1.0");
-  bench.begin("MCU Netzteil");
+  mcui.setFirmware("1.0");
+  mcui.begin("MCU Netzteil");
 }
 
 void loop() {
-  bool on = bench.controlBool("OUT");
-  float vSet = bench.controlFloat("VSET");
-  float iSet = bench.controlFloat("ISET");
+  bool on = mcui.controlBool("OUT");
+  float vSet = mcui.controlFloat("VSET");
+  float iSet = mcui.controlFloat("ISET");
 
   // ---- Simulation (replace with real measurements) ----
   float volts = 0, amps = 0;
@@ -82,12 +82,12 @@ void loop() {
   }
   // -----------------------------------------------------
 
-  bench.set("V", volts);
-  bench.set("I", amps);
-  bench.setText("MODE", mode);
-  bench.set("VS", vSet);
-  bench.set("IS", iSet);
+  mcui.set("V", volts);
+  mcui.set("I", amps);
+  mcui.setText("MODE", mode);
+  mcui.set("VS", vSet);
+  mcui.set("IS", iSet);
 
-  bench.update();
+  mcui.update();
   delay(10);
 }

@@ -1,5 +1,5 @@
 /*
-  MCU Bench example 03: Temperatures with DS18B20
+  MCU Instruments example 03: Temperatures with DS18B20
 
   Finds all DS18B20 sensors on one 1-Wire bus (up to 8) and shows each
   as its own channel. The app arranges them as tiles (phone: 4 per page,
@@ -16,7 +16,7 @@
 
   Board: any ESP32 with Bluetooth.
 */
-#include <MCUBench.h>
+#include <MCUi.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
@@ -25,7 +25,7 @@ const int MAX_SENSORS = 8;
 
 OneWire oneWire(ONE_WIRE_PIN);
 DallasTemperature sensors(&oneWire);
-MCUBench bench;
+MCUi mcui;
 
 // Keys and names must stay valid, so they live in static buffers
 char keys[MAX_SENSORS][4];
@@ -47,14 +47,14 @@ void setup() {
     sensors.getAddress(addresses[i], i);
     snprintf(keys[i], sizeof(keys[i]), "T%d", i + 1);
     snprintf(names[i], sizeof(names[i]), "Sensor %d", i + 1);
-    bench.addChannel(keys[i], names[i], "temperature");
-    bench.setRange(keys[i], -20, 120);
-    bench.setDecimals(keys[i], 1);
+    mcui.addChannel(keys[i], names[i], "temperature");
+    mcui.setRange(keys[i], -20, 120);
+    mcui.setDecimals(keys[i], 1);
   }
 
-  bench.setInterval(1000);  // temperatures change slowly
-  bench.setFirmware("1.0");
-  bench.begin("MCU Temperatur");
+  mcui.setInterval(1000);  // temperatures change slowly
+  mcui.setFirmware("1.0");
+  mcui.begin("MCU Temperatur");
   sensors.requestTemperatures();
 }
 
@@ -65,12 +65,12 @@ void loop() {
   if (millis() - lastRequest >= 1000) {
     for (int i = 0; i < sensorCount; i++) {
       float t = sensors.getTempC(addresses[i]);
-      if (t != DEVICE_DISCONNECTED_C) bench.set(keys[i], t);
+      if (t != DEVICE_DISCONNECTED_C) mcui.set(keys[i], t);
     }
     sensors.requestTemperatures();
     lastRequest = millis();
   }
 
-  bench.update();
+  mcui.update();
   delay(10);
 }

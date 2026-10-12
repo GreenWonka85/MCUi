@@ -1,8 +1,8 @@
 /*
-  MCUBench - implementation for ESP32 (Bluetooth LE, Nordic UART Service).
+  MCUi - implementation for ESP32 (Bluetooth LE, Nordic UART Service).
   License: MIT
 */
-#include "MCUBench.h"
+#include "MCUi.h"
 #include "sdkconfig.h"
 
 #if !defined(CONFIG_BT_ENABLED)
@@ -22,12 +22,12 @@ static const char *NUS_SERVICE = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
 static const char *NUS_RX = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
 static const char *NUS_TX = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
 
-static MCUBench *g_bench = nullptr;
+static MCUi *g_bench = nullptr;
 static BLEServer *g_server = nullptr;
 static BLECharacteristic *g_tx = nullptr;
 static portMUX_TYPE g_mux = portMUX_INITIALIZER_UNLOCKED;
 
-class MCUBenchServerCallbacks : public BLEServerCallbacks {
+class MCUiServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *) override {
     if (g_bench) g_bench->_onConnect();
   }
@@ -36,7 +36,7 @@ class MCUBenchServerCallbacks : public BLEServerCallbacks {
   }
 };
 
-class MCUBenchRxCallbacks : public BLECharacteristicCallbacks {
+class MCUiRxCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *characteristic) override {
     // String (core 3.x) or std::string (core 2.x): both offer c_str() and length()
     auto value = characteristic->getValue();
@@ -76,14 +76,14 @@ static uint8_t decimalsForStep(float step) {
 
 // ---------------------------------------------------------------- setup
 
-MCUBench::MCUBench() {
+MCUi::MCUi() {
   memset(_channels, 0, sizeof(_channels));
   memset(_controls, 0, sizeof(_controls));
   memset(_options, 0, sizeof(_options));
   memset(_id, 0, sizeof(_id));
 }
 
-bool MCUBench::begin(const char *deviceName) {
+bool MCUi::begin(const char *deviceName) {
   g_bench = this;
   _name = deviceName;
 
@@ -94,14 +94,14 @@ bool MCUBench::begin(const char *deviceName) {
   BLEDevice::setMTU(247);
 
   g_server = BLEDevice::createServer();
-  g_server->setCallbacks(new MCUBenchServerCallbacks());
+  g_server->setCallbacks(new MCUiServerCallbacks());
 
   BLEService *service = g_server->createService(NUS_SERVICE);
   g_tx = service->createCharacteristic(NUS_TX, BLECharacteristic::PROPERTY_NOTIFY);
   g_tx->addDescriptor(new BLE2902());
   BLECharacteristic *rx = service->createCharacteristic(
       NUS_RX, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
-  rx->setCallbacks(new MCUBenchRxCallbacks());
+  rx->setCallbacks(new MCUiRxCallbacks());
   service->start();
 
   // Service UUID in the advertisement, name in the scan response
@@ -118,14 +118,14 @@ bool MCUBench::begin(const char *deviceName) {
   return true;
 }
 
-void MCUBench::setFirmware(const char *version) { _firmware = version; }
+void MCUi::setFirmware(const char *version) { _firmware = version; }
 
-void MCUBench::setInterval(uint32_t ms) { _interval = ms < 20 ? 20 : ms; }
+void MCUi::setInterval(uint32_t ms) { _interval = ms < 20 ? 20 : ms; }
 
 // ---------------------------------------------------------------- channels
 
-bool MCUBench::addChannel(const char *key, const char *name, const char *type, const char *unit) {
-  if (_channelCount >= MCUBENCH_MAX_CHANNELS || findChannel(key)) return false;
+bool MCUi::addChannel(const char *key, const char *name, const char *type, const char *unit) {
+  if (_channelCount >= MCUI_MAX_CHANNELS || findChannel(key)) return false;
   Channel &c = _channels[_channelCount++];
   memset(&c, 0, sizeof(Channel));
   c.key = key;
@@ -138,7 +138,7 @@ bool MCUBench::addChannel(const char *key, const char *name, const char *type, c
   return true;
 }
 
-void MCUBench::setRange(const char *key, float min, float max) {
+void MCUi::setRange(const char *key, float min, float max) {
   Channel *c = findChannel(key);
   if (!c) return;
   c->min = min;
@@ -146,27 +146,27 @@ void MCUBench::setRange(const char *key, float min, float max) {
   c->hasRange = true;
 }
 
-void MCUBench::setDecimals(const char *key, uint8_t decimals) {
+void MCUi::setDecimals(const char *key, uint8_t decimals) {
   Channel *c = findChannel(key);
   if (c) c->decimals = decimals > 9 ? 9 : decimals;
 }
 
-void MCUBench::setGroup(const char *key, const char *group) {
+void MCUi::setGroup(const char *key, const char *group) {
   Channel *c = findChannel(key);
   if (c) c->group = group;
 }
 
-void MCUBench::setPage(const char *key, uint8_t page) {
+void MCUi::setPage(const char *key, uint8_t page) {
   Channel *c = findChannel(key);
   if (c) c->page = page;
 }
 
-void MCUBench::setSetpointOf(const char *key, const char *measuredKey) {
+void MCUi::setSetpointOf(const char *key, const char *measuredKey) {
   Channel *c = findChannel(key);
   if (c) c->setpointOf = measuredKey;
 }
 
-void MCUBench::setAlarm(const char *key, float low, float high) {
+void MCUi::setAlarm(const char *key, float low, float high) {
   Channel *c = findChannel(key);
   if (!c) return;
   c->alarmLow = low;
@@ -176,8 +176,8 @@ void MCUBench::setAlarm(const char *key, float low, float high) {
 
 // ---------------------------------------------------------------- controls
 
-bool MCUBench::addSwitch(const char *key, const char *name, bool initial) {
-  if (_controlCount >= MCUBENCH_MAX_CONTROLS || findControl(key)) return false;
+bool MCUi::addSwitch(const char *key, const char *name, bool initial) {
+  if (_controlCount >= MCUI_MAX_CONTROLS || findControl(key)) return false;
   Control &c = _controls[_controlCount++];
   memset(&c, 0, sizeof(Control));
   c.key = key;
@@ -187,8 +187,8 @@ bool MCUBench::addSwitch(const char *key, const char *name, bool initial) {
   return true;
 }
 
-bool MCUBench::addButton(const char *key, const char *name) {
-  if (_controlCount >= MCUBENCH_MAX_CONTROLS || findControl(key)) return false;
+bool MCUi::addButton(const char *key, const char *name) {
+  if (_controlCount >= MCUI_MAX_CONTROLS || findControl(key)) return false;
   Control &c = _controls[_controlCount++];
   memset(&c, 0, sizeof(Control));
   c.key = key;
@@ -198,8 +198,8 @@ bool MCUBench::addButton(const char *key, const char *name) {
   return true;
 }
 
-bool MCUBench::addSlider(const char *key, const char *name, float min, float max, float step, float initial, const char *unit) {
-  if (_controlCount >= MCUBENCH_MAX_CONTROLS || findControl(key)) return false;
+bool MCUi::addSlider(const char *key, const char *name, float min, float max, float step, float initial, const char *unit) {
+  if (_controlCount >= MCUI_MAX_CONTROLS || findControl(key)) return false;
   Control &c = _controls[_controlCount++];
   memset(&c, 0, sizeof(Control));
   c.key = key;
@@ -213,8 +213,8 @@ bool MCUBench::addSlider(const char *key, const char *name, float min, float max
   return true;
 }
 
-bool MCUBench::addNumber(const char *key, const char *name, float min, float max, float initial, const char *unit) {
-  if (_controlCount >= MCUBENCH_MAX_CONTROLS || findControl(key)) return false;
+bool MCUi::addNumber(const char *key, const char *name, float min, float max, float initial, const char *unit) {
+  if (_controlCount >= MCUI_MAX_CONTROLS || findControl(key)) return false;
   Control &c = _controls[_controlCount++];
   memset(&c, 0, sizeof(Control));
   c.key = key;
@@ -227,8 +227,8 @@ bool MCUBench::addNumber(const char *key, const char *name, float min, float max
   return true;
 }
 
-bool MCUBench::addSelect(const char *key, const char *name, const char *options, const char *initial) {
-  if (_controlCount >= MCUBENCH_MAX_CONTROLS || findControl(key)) return false;
+bool MCUi::addSelect(const char *key, const char *name, const char *options, const char *initial) {
+  if (_controlCount >= MCUI_MAX_CONTROLS || findControl(key)) return false;
   Control &c = _controls[_controlCount++];
   memset(&c, 0, sizeof(Control));
   c.key = key;
@@ -239,19 +239,19 @@ bool MCUBench::addSelect(const char *key, const char *name, const char *options,
   return true;
 }
 
-void MCUBench::setControlGroup(const char *key, const char *group) {
+void MCUi::setControlGroup(const char *key, const char *group) {
   Control *c = findControl(key);
   if (c) c->group = group;
 }
 
-void MCUBench::setControlPage(const char *key, uint8_t page) {
+void MCUi::setControlPage(const char *key, uint8_t page) {
   Control *c = findControl(key);
   if (c) c->page = page;
 }
 
-void MCUBench::onControl(ControlCallback callback) { _callback = callback; }
+void MCUi::onControl(ControlCallback callback) { _callback = callback; }
 
-bool MCUBench::controlBool(const char *key) {
+bool MCUi::controlBool(const char *key) {
   Control *c = findControl(key);
   if (!c || strcmp(c->value, "1") != 0) return false;
   // A button press is reported once, then cleared
@@ -259,17 +259,17 @@ bool MCUBench::controlBool(const char *key) {
   return true;
 }
 
-float MCUBench::controlFloat(const char *key) {
+float MCUi::controlFloat(const char *key) {
   Control *c = findControl(key);
   return c ? atof(c->value) : NAN;
 }
 
-const char *MCUBench::controlText(const char *key) {
+const char *MCUi::controlText(const char *key) {
   Control *c = findControl(key);
   return c ? c->value : "";
 }
 
-void MCUBench::setControl(const char *key, const char *value) {
+void MCUi::setControl(const char *key, const char *value) {
   Control *c = findControl(key);
   if (!c) return;
   strncpy(c->value, value, sizeof(c->value) - 1);
@@ -281,7 +281,7 @@ void MCUBench::setControl(const char *key, const char *value) {
   }
 }
 
-void MCUBench::setControl(const char *key, float value) {
+void MCUi::setControl(const char *key, float value) {
   Control *c = findControl(key);
   if (!c) return;
   char buf[24];
@@ -289,7 +289,7 @@ void MCUBench::setControl(const char *key, float value) {
   setControl(key, buf);
 }
 
-void MCUBench::setOption(const char *name, const char *value) {
+void MCUi::setOption(const char *name, const char *value) {
   for (uint8_t i = 0; i < _optionCount; i++) {
     if (strcmp(_options[i][0], name) == 0) {
       _options[i][1] = value;
@@ -305,14 +305,14 @@ void MCUBench::setOption(const char *name, const char *value) {
 
 // ---------------------------------------------------------------- values
 
-void MCUBench::set(const char *key, float value) {
+void MCUi::set(const char *key, float value) {
   Channel *c = findChannel(key);
   if (!c) return;
   c->value = value;
   c->hasValue = true;
 }
 
-void MCUBench::setText(const char *key, const char *text) {
+void MCUi::setText(const char *key, const char *text) {
   Channel *c = findChannel(key);
   if (!c) return;
   strncpy(c->text, text, sizeof(c->text) - 1);
@@ -321,28 +321,28 @@ void MCUBench::setText(const char *key, const char *text) {
   c->hasValue = true;
 }
 
-void MCUBench::event(const char *text) {
+void MCUi::event(const char *text) {
   if (!_announced) return;
   char line[160];
   snprintf(line, sizeof(line), "EVT:%s", text);
   sendLine(line);
 }
 
-bool MCUBench::isConnected() const { return _connected; }
+bool MCUi::isConnected() const { return _connected; }
 
 // ---------------------------------------------------------------- runtime
 
-void MCUBench::_onConnect() {
+void MCUi::_onConnect() {
   _connected = true;
   _connectEvent = true;
 }
 
-void MCUBench::_onDisconnect() {
+void MCUi::_onDisconnect() {
   _connected = false;
   _connectEvent = true;
 }
 
-void MCUBench::_onReceive(const uint8_t *data, size_t len) {
+void MCUi::_onReceive(const uint8_t *data, size_t len) {
   portENTER_CRITICAL(&g_mux);
   for (size_t i = 0; i < len; i++) {
     uint16_t next = (_rxHead + 1) % RX_SIZE;
@@ -353,7 +353,7 @@ void MCUBench::_onReceive(const uint8_t *data, size_t len) {
   portEXIT_CRITICAL(&g_mux);
 }
 
-void MCUBench::update() {
+void MCUi::update() {
   uint32_t now = millis();
 
   if (_connectEvent) {
@@ -400,7 +400,7 @@ void MCUBench::update() {
   if (_announced && now - _lastSend >= _interval) sendNow();
 }
 
-void MCUBench::handleLine(char *line) {
+void MCUi::handleLine(char *line) {
   if (strncmp(line, "HELLO", 5) == 0) {
     const char *mtu = strstr(line, "mtu=");
     if (mtu) {
@@ -478,10 +478,10 @@ void MCUBench::handleLine(char *line) {
   }
 }
 
-void MCUBench::sendAnnouncement() {
+void MCUi::sendAnnouncement() {
   char line[320];
 
-  snprintf(line, sizeof(line), "DEV:id=%s;name=%s;proto=%d", _id, _name, MCUBENCH_PROTOCOL_VERSION);
+  snprintf(line, sizeof(line), "DEV:id=%s;name=%s;proto=%d", _id, _name, MCUI_PROTOCOL_VERSION);
   if (_firmware) appendf(line, sizeof(line), ";fw=%s", _firmware);
   sendLine(line);
 
@@ -528,7 +528,7 @@ void MCUBench::sendAnnouncement() {
   _lastSend = 0;
 }
 
-void MCUBench::sendNow() {
+void MCUi::sendNow() {
   if (!_connected || !_announced) return;
   char line[512];
   line[0] = 0;
@@ -547,7 +547,7 @@ void MCUBench::sendNow() {
   if (line[0]) sendLine(line);
 }
 
-void MCUBench::sendLine(const char *line) {
+void MCUi::sendLine(const char *line) {
   if (!_connected || !g_tx) return;
   size_t len = strlen(line);
   size_t total = len + 1; // with '\n'
@@ -570,21 +570,21 @@ void MCUBench::sendLine(const char *line) {
 
 // ---------------------------------------------------------------- lookup
 
-MCUBench::Channel *MCUBench::findChannel(const char *key) {
+MCUi::Channel *MCUi::findChannel(const char *key) {
   for (uint8_t i = 0; i < _channelCount; i++) {
     if (strcmp(_channels[i].key, key) == 0) return &_channels[i];
   }
   return nullptr;
 }
 
-MCUBench::Control *MCUBench::findControl(const char *key) {
+MCUi::Control *MCUi::findControl(const char *key) {
   for (uint8_t i = 0; i < _controlCount; i++) {
     if (strcmp(_controls[i].key, key) == 0) return &_controls[i];
   }
   return nullptr;
 }
 
-uint8_t MCUBench::defaultDecimals(const char *type) {
+uint8_t MCUi::defaultDecimals(const char *type) {
   if (strcmp(type, "current") == 0) return 4;
   if (strcmp(type, "voltage") == 0) return 3;
   if (strcmp(type, "capacitance") == 0 || strcmp(type, "inductance") == 0) return 9;
