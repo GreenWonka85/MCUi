@@ -30,6 +30,8 @@ const int ADC_PIN = 3;
 #else
 const int ADC_PIN = 34;
 #endif
+// Voltage divider. The measured pin voltage is multiplied by (R1 + R2) / R2.
+// Without a divider (direct measurement, max. 3.1 V) set R1 = 0.
 const float R1 = 100000.0;  // Ohm, upper resistor
 const float R2 = 10000.0;   // Ohm, lower resistor
 const float DIVIDER = (R1 + R2) / R2;
