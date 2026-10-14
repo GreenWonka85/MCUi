@@ -53,6 +53,7 @@ void setup() {
   mcui.addSlider("ISET", "Current limit", 0, 5, 0.01, 1.0, "A");
   mcui.onControl(onControl);
 
+  mcui.setDebug(Serial);  // status messages in the Serial Monitor
   mcui.setFirmware("1.0");
   mcui.begin("MCU Netzteil");
 }

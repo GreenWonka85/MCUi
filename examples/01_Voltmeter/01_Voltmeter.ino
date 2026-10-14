@@ -43,6 +43,7 @@ void setup() {
   mcui.setRange("V", 0, 30);
   mcui.setDecimals("V", 2);
 
+  mcui.setDebug(Serial);  // status messages in the Serial Monitor
   mcui.setFirmware("1.0");
   mcui.begin("MCU Voltmeter");
   Serial.println("MCUi: waiting for the app ...");

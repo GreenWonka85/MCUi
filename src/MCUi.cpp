@@ -31,8 +31,10 @@ class MCUiServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *) override {
     if (g_bench) g_bench->_onConnect();
   }
-  void onDisconnect(BLEServer *) override {
+  void onDisconnect(BLEServer *server) override {
     if (g_bench) g_bench->_onDisconnect();
+    // Advertise again right away so the app can find the device
+    server->startAdvertising();
   }
 };
 
@@ -115,12 +117,17 @@ bool MCUi::begin(const char *deviceName) {
   adv->setAdvertisementData(advData);
   adv->setScanResponseData(scanData);
   BLEDevice::startAdvertising();
+  if (_debug) {
+    _debug->printf("MCUi: Bluetooth LE ready, advertising as \"%s\" (ID %s)\n", deviceName, _id);
+  }
   return true;
 }
 
 void MCUi::setFirmware(const char *version) { _firmware = version; }
 
 void MCUi::setInterval(uint32_t ms) { _interval = ms < 20 ? 20 : ms; }
+
+void MCUi::setDebug(Print &out) { _debug = &out; }
 
 // ---------------------------------------------------------------- channels
 
@@ -364,10 +371,10 @@ void MCUi::update() {
       _helloSeen = false;
       _chunk = 20;
       _lineLen = 0;
+      if (_debug) _debug->println("MCUi: app connected");
     } else {
       _announced = false;
-      delay(50);
-      BLEDevice::startAdvertising();
+      if (_debug) _debug->println("MCUi: app disconnected, advertising again");
     }
   }
 
@@ -411,6 +418,7 @@ void MCUi::handleLine(char *line) {
       _chunk = (uint16_t)chunk;
     }
     _helloSeen = true;
+    if (_debug) _debug->printf("MCUi: HELLO from app, packet size %u\n", _chunk);
     sendAnnouncement();
     return;
   }

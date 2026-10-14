@@ -63,6 +63,12 @@ public:
   /** Data send interval in milliseconds (default 200). */
   void setInterval(uint32_t ms);
 
+  /**
+   * Prints status messages (advertising, connected, disconnected) to a
+   * serial port, e.g. setDebug(Serial). Call before begin().
+   */
+  void setDebug(Print &out);
+
   // ------------------------------------------------------------ Channels
   /**
    * Adds a measurement channel.
@@ -176,6 +182,7 @@ private:
   uint32_t _connectedAt = 0;
   uint16_t _chunk = 20;
   ControlCallback _callback = nullptr;
+  Print *_debug = nullptr;
 
   volatile bool _connected = false;
   volatile bool _connectEvent = false;

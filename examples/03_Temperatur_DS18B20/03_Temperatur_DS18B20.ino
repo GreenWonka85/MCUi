@@ -53,6 +53,7 @@ void setup() {
   }
 
   mcui.setInterval(1000);  // temperatures change slowly
+  mcui.setDebug(Serial);  // status messages in the Serial Monitor
   mcui.setFirmware("1.0");
   mcui.begin("MCU Temperatur");
   sensors.requestTemperatures();

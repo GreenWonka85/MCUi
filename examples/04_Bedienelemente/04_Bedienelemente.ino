@@ -53,6 +53,7 @@ void setup() {
 
   analogWrite(PWM_PIN, 50 * 255 / 100);
 
+  mcui.setDebug(Serial);  // status messages in the Serial Monitor
   mcui.setFirmware("1.0");
   mcui.begin("MCU Controls");
 }
