@@ -1,50 +1,16 @@
 /*
-  MCUi - implementation for ESP32 (Bluetooth LE, Nordic UART Service).
+  MCUi - protocol and channel handling. The connections are in
+  MCUi_BLE.cpp, MCUi_Classic.cpp and MCUi_WiFi.cpp.
   License: MIT
 */
 #include "MCUi.h"
-#include "sdkconfig.h"
-
-#if !defined(CONFIG_BT_ENABLED)
-#error "This board has no Bluetooth (e.g. ESP32-S2). Please use an ESP32, ESP32-S3, ESP32-C3 or ESP32-C6."
-#endif
-
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
+#include "MCUi_internal.h"
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
 
-// Nordic UART Service (see docs/PROTOCOL.md, section 6.1)
-static const char *NUS_SERVICE = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
-static const char *NUS_RX = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
-static const char *NUS_TX = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
-
-static MCUi *g_bench = nullptr;
-static BLEServer *g_server = nullptr;
-static BLECharacteristic *g_tx = nullptr;
 static portMUX_TYPE g_mux = portMUX_INITIALIZER_UNLOCKED;
-
-class MCUiServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer *) override {
-    if (g_bench) g_bench->_onConnect();
-  }
-  void onDisconnect(BLEServer *server) override {
-    if (g_bench) g_bench->_onDisconnect();
-    // Advertise again right away so the app can find the device
-    server->startAdvertising();
-  }
-};
-
-class MCUiRxCallbacks : public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic *characteristic) override {
-    // String (core 3.x) or std::string (core 2.x): both offer c_str() and length()
-    auto value = characteristic->getValue();
-    if (g_bench) g_bench->_onReceive((const uint8_t *)value.c_str(), value.length());
-  }
-};
 
 // ---------------------------------------------------------------- helpers
 
@@ -85,42 +51,40 @@ MCUi::MCUi() {
   memset(_id, 0, sizeof(_id));
 }
 
-bool MCUi::begin(const char *deviceName) {
-  g_bench = this;
+void MCUi::initCommon(const char *deviceName, Link link) {
   _name = deviceName;
-
+  _link = link;
   uint64_t mac = ESP.getEfuseMac();
   snprintf(_id, sizeof(_id), "%04X%08X", (unsigned)(uint16_t)(mac >> 32), (unsigned)(uint32_t)mac);
+}
 
-  BLEDevice::init(deviceName);
-  BLEDevice::setMTU(247);
-
-  g_server = BLEDevice::createServer();
-  g_server->setCallbacks(new MCUiServerCallbacks());
-
-  BLEService *service = g_server->createService(NUS_SERVICE);
-  g_tx = service->createCharacteristic(NUS_TX, BLECharacteristic::PROPERTY_NOTIFY);
-  g_tx->addDescriptor(new BLE2902());
-  BLECharacteristic *rx = service->createCharacteristic(
-      NUS_RX, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
-  rx->setCallbacks(new MCUiRxCallbacks());
-  service->start();
-
-  // Service UUID in the advertisement, name in the scan response
-  // (both together do not fit into 31 bytes)
-  BLEAdvertising *adv = BLEDevice::getAdvertising();
-  BLEAdvertisementData advData;
-  advData.setFlags(0x06);
-  advData.setCompleteServices(BLEUUID(NUS_SERVICE));
-  BLEAdvertisementData scanData;
-  scanData.setName(deviceName);
-  adv->setAdvertisementData(advData);
-  adv->setScanResponseData(scanData);
-  BLEDevice::startAdvertising();
+bool MCUi::begin(const char *deviceName) {
+  initCommon(deviceName, LINK_BLE);
+  bool ok = mcui_internal::bleBegin(this, deviceName);
   if (_debug) {
-    _debug->printf("MCUi: Bluetooth LE ready, advertising as \"%s\" (ID %s)\n", deviceName, _id);
+    if (ok) _debug->printf("MCUi: Bluetooth LE ready, advertising as \"%s\" (ID %s)\n", deviceName, _id);
+    else _debug->println("MCUi: this board has no Bluetooth LE");
   }
-  return true;
+  return ok;
+}
+
+bool MCUi::beginClassic(const char *deviceName) {
+  initCommon(deviceName, LINK_CLASSIC);
+  bool ok = mcui_internal::classicBegin(this, deviceName);
+  if (_debug) {
+    if (ok) _debug->printf("MCUi: Bluetooth Classic ready as \"%s\" (ID %s). Pair it in the Android Bluetooth settings.\n", deviceName, _id);
+    else _debug->println("MCUi: this board has no Bluetooth Classic (only the classic ESP32 has it)");
+  }
+  return ok;
+}
+
+bool MCUi::beginWiFi(const char *deviceName, const char *ssid, const char *password) {
+  initCommon(deviceName, LINK_WIFI);
+  return mcui_internal::wifiBegin(this, deviceName, ssid, password);
+}
+
+bool MCUi::beginWiFi(const char *deviceName) {
+  return beginWiFi(deviceName, nullptr, nullptr);
 }
 
 void MCUi::setFirmware(const char *version) { _firmware = version; }
@@ -361,6 +325,10 @@ void MCUi::_onReceive(const uint8_t *data, size_t len) {
 }
 
 void MCUi::update() {
+  // Classic and Wi-Fi are polled here, Bluetooth LE uses callbacks
+  if (_link == LINK_CLASSIC) mcui_internal::classicPoll(this);
+  else if (_link == LINK_WIFI) mcui_internal::wifiPoll(this);
+
   uint32_t now = millis();
 
   if (_connectEvent) {
@@ -374,7 +342,7 @@ void MCUi::update() {
       if (_debug) _debug->println("MCUi: app connected");
     } else {
       _announced = false;
-      if (_debug) _debug->println("MCUi: app disconnected, advertising again");
+      if (_debug) _debug->println("MCUi: app disconnected, waiting for the app");
     }
   }
 
@@ -556,23 +524,13 @@ void MCUi::sendNow() {
 }
 
 void MCUi::sendLine(const char *line) {
-  if (!_connected || !g_tx) return;
+  if (!_connected) return;
   size_t len = strlen(line);
-  size_t total = len + 1; // with '\n'
-  size_t pos = 0;
-  uint8_t buf[244];
-  while (pos < total) {
-    size_t n = total - pos;
-    if (n > _chunk) n = _chunk;
-    if (n > sizeof(buf)) n = sizeof(buf);
-    for (size_t i = 0; i < n; i++) {
-      size_t p = pos + i;
-      buf[i] = p < len ? (uint8_t)line[p] : (uint8_t)'\n';
-    }
-    g_tx->setValue(buf, n);
-    g_tx->notify();
-    pos += n;
-    delay(3);
+  switch (_link) {
+    case LINK_BLE: mcui_internal::bleSend(line, len, _chunk); break;
+    case LINK_CLASSIC: mcui_internal::classicSend(line, len); break;
+    case LINK_WIFI: mcui_internal::wifiSend(line, len); break;
+    default: break;
   }
 }
 

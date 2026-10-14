@@ -4,8 +4,11 @@
   Protocol: docs/PROTOCOL.md
   License:  MIT
 
-  Version 0.1: Bluetooth LE on ESP32 (ESP32, ESP32-S3, ESP32-C3, ESP32-C6).
-  Bluetooth Classic and Wi-Fi follow in a later version.
+  Version 0.2: Bluetooth LE, Bluetooth Classic and Wi-Fi on ESP32.
+
+    begin("Name")                     Bluetooth LE   ESP32, -S3, -C3, -C6
+    beginClassic("Name")              Bluetooth      ESP32 only (Android only)
+    beginWiFi("Name", ssid, password) Wi-Fi          all ESP32 incl. -S2
 
   Minimal example:
 
@@ -32,7 +35,7 @@
 #include <Arduino.h>
 
 #if !defined(ESP32)
-#error "MCUi 0.1 supports ESP32 boards only. Other boards follow in a later version."
+#error "MCUi supports ESP32 boards only. Other boards follow in a later version."
 #endif
 
 // ESP32-S3/C3/C6 with "USB CDC On Boot" on core 2.x: writes to the USB serial
@@ -55,7 +58,11 @@
 #endif
 
 #define MCUI_PROTOCOL_VERSION 1
-#define MCUI_LIBRARY_VERSION "0.1.0"
+#define MCUI_LIBRARY_VERSION "0.2.0"
+
+#ifndef MCUI_WIFI_PORT
+#define MCUI_WIFI_PORT 4210
+#endif
 
 class MCUi {
 public:
@@ -65,8 +72,25 @@ public:
   MCUi();
 
   // ------------------------------------------------------------ Setup
-  /** Starts Bluetooth LE. Call after defining channels and controls. */
+  // Start ONE of the connections below, after defining channels and controls.
+
+  /** Bluetooth LE (ESP32, ESP32-S3, -C3, -C6). Works with Android and iOS. */
   bool begin(const char *deviceName);
+
+  /**
+   * Bluetooth Classic, Serial Port Profile (classic ESP32 only, Android only).
+   * Pair the ESP32 once in the Android Bluetooth settings.
+   */
+  bool beginClassic(const char *deviceName);
+
+  /**
+   * Wi-Fi: connects to your network and waits for the app on TCP port 4210.
+   * The app finds the device automatically (mDNS) or by its IP address.
+   */
+  bool beginWiFi(const char *deviceName, const char *ssid, const char *password);
+
+  /** Wi-Fi, if your sketch already connects to the network itself. */
+  bool beginWiFi(const char *deviceName);
 
   /** Firmware version shown in the app (optional). */
   void setFirmware(const char *version);
@@ -139,7 +163,10 @@ public:
   void sendNow();
   bool isConnected() const;
 
-  // Internal: called by the Bluetooth callbacks
+  // Internal: called by the connection code
+  const char *_deviceId() const { return _id; }
+  const char *_deviceName() const { return _name; }
+  Print *_debugOut() const { return _debug; }
   void _onConnect();
   void _onDisconnect();
   void _onReceive(const uint8_t *data, size_t len);
@@ -171,6 +198,9 @@ private:
     char value[24];
   };
 
+  enum Link : uint8_t { LINK_NONE, LINK_BLE, LINK_CLASSIC, LINK_WIFI };
+
+  void initCommon(const char *deviceName, Link link);
   Channel *findChannel(const char *key);
   Control *findControl(const char *key);
   void sendLine(const char *line);
@@ -192,6 +222,7 @@ private:
   uint32_t _lastSend = 0;
   uint32_t _connectedAt = 0;
   uint16_t _chunk = 20;
+  Link _link = LINK_NONE;
   ControlCallback _callback = nullptr;
   Print *_debug = nullptr;
 
@@ -200,7 +231,7 @@ private:
   bool _announced = false;
   bool _helloSeen = false;
 
-  // Receive ring buffer (filled from the Bluetooth task)
+  // Receive ring buffer (filled from the Bluetooth task or update())
   static const uint16_t RX_SIZE = 512;
   uint8_t _rx[RX_SIZE];
   volatile uint16_t _rxHead = 0;

@@ -4,16 +4,21 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
 
 *Deutsch: siehe unten.*
 
-## Features (version 0.1)
+## Features (version 0.2)
 
-- Bluetooth LE on ESP32, ESP32-S3, ESP32-C3 and ESP32-C6 (Nordic UART Service)
+- Three connections, chosen in the sketch:
+
+  | Call | Connection | Boards | App |
+  |---|---|---|---|
+  | `begin("Name")` | Bluetooth LE | ESP32, ESP32-S3, -C3, -C6 | Android, iOS |
+  | `beginClassic("Name")` | Bluetooth Classic | classic ESP32 only | Android |
+  | `beginWiFi("Name", ssid, password)` | Wi-Fi (TCP 4210, mDNS) | all ESP32, incl. -S2 | Android, iOS |
+
 - Up to 24 channels: voltage, current, temperature, humidity, pressure and [many more types](docs/PROTOCOL.md#5-channel-types)
 - Power supply display with setpoints and CV/CC indicator, dual power supplies via groups
 - Controls in the app: switch, button, slider, number input, selection list
 - The app computes power and energy automatically from voltage and current
 - Simple, open text protocol: [docs/PROTOCOL.md](docs/PROTOCOL.md)
-
-Bluetooth Classic, Wi-Fi and further boards follow in later versions.
 
 ## Installation
 
@@ -52,12 +57,17 @@ Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 | `02_Labornetzteil` | Simulated lab power supply with CV/CC, output switch and setpoint sliders |
 | `03_Temperatur_DS18B20` | Any number of DS18B20 sensors on one 1-Wire bus (up to 8) |
 | `04_Bedienelemente` | Switch, slider, selection list and button control LEDs |
+| `05_WLAN_Voltmeter` | Voltmeter over Wi-Fi |
+| `06_Bluetooth_Classic` | Simulated signal over Bluetooth Classic (classic ESP32, Android) |
 
 ## API overview
 
 | Function | Purpose |
 |---|---|
 | `begin(name)` | Starts Bluetooth LE with the device name |
+| `beginClassic(name)` | Starts Bluetooth Classic (classic ESP32 only) |
+| `beginWiFi(name, ssid, password)` | Joins the Wi-Fi network and waits for the app |
+| `setDebug(Serial)` | Status messages (connection, IP address) in the Serial Monitor |
 | `addChannel(key, name, type, unit)` | Adds a measurement channel |
 | `setRange`, `setDecimals`, `setGroup`, `setPage` | Display hints for a channel |
 | `setSetpointOf(key, measuredKey)` | Channel is the setpoint of another channel |
@@ -88,7 +98,9 @@ Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom M
 
 **Erste Schritte:** Beispiel `01_Voltmeter` öffnen, hochladen, in der App auf *Suchen* tippen und das Gerät wählen.
 
-**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster).
+**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN (alle ESP32, auch S2).
+
+**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic.
 
 **Wichtig:** Schlüssel, Namen, Einheiten und Optionslisten werden als Zeiger gespeichert. Bitte Zeichenketten-Literale (`"V"`) oder globale bzw. statische Puffer verwenden, keine temporären `String`-Objekte.
 

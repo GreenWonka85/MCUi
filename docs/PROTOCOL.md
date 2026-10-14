@@ -208,10 +208,20 @@ Nordic UART Service (NUS):
 
 Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lines as above.
 
+- Only the classic ESP32 supports Bluetooth Classic. iOS does not allow SPP for apps.
+- The device is paired once in the Android Bluetooth settings; the app lists paired devices.
+- No packet size limit: `mtu` in `HELLO` is ignored.
+
 ### 6.3 Wi-Fi
 
-TCP, port `4210`. Discovery via mDNS service `_mcui._tcp`. Same lines as above.
-(Specified for version 1, implemented in a later app release.)
+- The device is a TCP server on port `4210` and accepts one app at a time.
+  A new connection replaces the previous one (for example after the phone changed networks).
+- Discovery via mDNS (DNS-SD): service `_mcui._tcp`, instance name = device name,
+  TXT records `id` (device ID) and `name`. Host name `mcui-<last 6 hex digits of the ID>`.
+- If mDNS is blocked by the network, the app connects by IP address.
+- Same lines as above, no packet size limit.
+- The app sends `PING` every 3 s. If no line arrives for 10 s, the app treats
+  the connection as lost and reconnects.
 
 ## 7. Example: dual power supply
 
