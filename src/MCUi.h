@@ -35,6 +35,17 @@
 #error "MCUi 0.1 supports ESP32 boards only. Other boards follow in a later version."
 #endif
 
+// ESP32-S3/C3/C6 with "USB CDC On Boot" on core 2.x: writes to the USB serial
+// port block while no Serial Monitor is open. Bluetooth then stalls as well.
+// Fixed in core 3.0.0 (see espressif/arduino-esp32 PR #7721).
+#if __has_include(<esp_arduino_version.h>)
+#include <esp_arduino_version.h>
+#endif
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT && defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE && \
+    (!defined(ESP_ARDUINO_VERSION_MAJOR) || ESP_ARDUINO_VERSION_MAJOR < 3)
+#warning "MCUi: ESP32 core 2.x with USB CDC On Boot: the sketch stalls without an open Serial Monitor. Please update the ESP32 core to 3.x or set Tools > USB CDC On Boot > Disabled."
+#endif
+
 #ifndef MCUI_MAX_CHANNELS
 #define MCUI_MAX_CHANNELS 24
 #endif

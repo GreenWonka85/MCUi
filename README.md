@@ -19,7 +19,9 @@ Bluetooth Classic, Wi-Fi and further boards follow in later versions.
 
 1. Arduino IDE: *Sketch > Include Library > Add .ZIP Library...* and select the ZIP of this repository (*Code > Download ZIP* on GitHub).
    Or copy the folder into `Documents/Arduino/libraries/MCUi`.
-2. ESP32 board package (Espressif) version 2.0.11 or newer, 3.x recommended.
+2. ESP32 board package (Espressif) version 3.x. Version 2.0.11 or newer works on the classic ESP32.
+
+**ESP32-S3, -C3, -C6 on core 2.x:** with *USB CDC On Boot: Enabled* the sketch stalls as long as no Serial Monitor is open, and Bluetooth stops working too. This is a known issue of core 2.x, fixed in 3.0.0. Update the core to 3.x, or set *Tools > USB CDC On Boot > Disabled*. Also set *Tools > Core Debug Level > None*.
 
 ## Quick start
 
@@ -80,7 +82,9 @@ MIT, see [LICENSE](LICENSE).
 
 Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom Mikrocontroller auf Smartphone oder Tablet als Analoganzeige, Digitalanzeige, Netzteil-Ansicht oder Sensor-Kachel anzeigen und das Gerät aus der App bedienen.
 
-**Installation:** In der Arduino IDE *Sketch > Bibliothek einbinden > .ZIP-Bibliothek hinzufügen...* und das ZIP dieses Repositories wählen. Benötigt wird das ESP32-Boardpaket von Espressif ab Version 2.0.11, empfohlen 3.x.
+**Installation:** In der Arduino IDE *Sketch > Bibliothek einbinden > .ZIP-Bibliothek hinzufügen...* und das ZIP dieses Repositories wählen. Benötigt wird das ESP32-Boardpaket von Espressif in Version 3.x.
+
+**ESP32-S3, -C3, -C6 mit Boardpaket 2.x:** Bei *USB CDC On Boot: Enabled* bleibt der Sketch stehen, solange kein Serieller Monitor geöffnet ist, und Bluetooth funktioniert dann ebenfalls nicht. Das ist ein bekannter Fehler im Boardpaket 2.x, behoben ab 3.0.0. Abhilfe: Boardpaket auf 3.x aktualisieren oder *Werkzeuge > USB CDC On Boot > Disabled* wählen. Außerdem *Werkzeuge > Core Debug Level > Keine* einstellen.
 
 **Erste Schritte:** Beispiel `01_Voltmeter` öffnen, hochladen, in der App auf *Suchen* tippen und das Gerät wählen.
 
