@@ -201,6 +201,8 @@ Nordic UART Service (NUS):
 | TX (device notifies) | `6E400003-B5A3-F393-E0A9-E50E24DCCA9E` |
 
 - The device advertises the NUS service UUID so the app can find it.
+- It also advertises manufacturer data `FF FF 4D 43 55 69 01`
+  (company ID 0xFFFF, "MCUi", protocol version). The app lists only devices with this marker.
 - A line may be split over several notifications. The app reassembles at `\n`.
 - Until `HELLO` with `mtu` has arrived, the device must not send more than 20 bytes per notification.
 

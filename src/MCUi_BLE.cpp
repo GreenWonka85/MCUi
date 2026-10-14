@@ -63,6 +63,10 @@ bool bleBegin(MCUi *bench, const char *deviceName) {
   BLEAdvertisementData advData;
   advData.setFlags(0x06);
   advData.setCompleteServices(BLEUUID(NUS_SERVICE));
+  // MCUi marker so the app shows only devices with this library:
+  // company ID 0xFFFF (no assigned company), "MCUi", protocol version
+  const char marker[] = {(char)0xFF, (char)0xFF, 'M', 'C', 'U', 'i', (char)MCUI_PROTOCOL_VERSION, 0};
+  advData.setManufacturerData(marker);
   BLEAdvertisementData scanData;
   scanData.setName(deviceName);
   adv->setAdvertisementData(advData);

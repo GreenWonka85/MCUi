@@ -59,7 +59,7 @@
 #endif
 
 #define MCUI_PROTOCOL_VERSION 1
-#define MCUI_LIBRARY_VERSION "0.2.0"
+#define MCUI_LIBRARY_VERSION "0.2.1"
 
 #ifndef MCUI_WIFI_PORT
 #define MCUI_WIFI_PORT 4210
