@@ -1,17 +1,29 @@
 /*
   MCU Instruments example 05: Voltmeter over Wi-Fi (WLAN)
 
-  Same as example 01, but the ESP32 joins your Wi-Fi network instead of
-  using Bluetooth. Phone and ESP32 must be in the same network.
-  The app finds the device automatically under "Wi-Fi". If not (some
-  routers block this), enter the IP address shown in the Serial Monitor.
+  Two ways, chosen below with USE_OWN_NETWORK:
+
+  1. Own network (default): the ESP32 opens the Wi-Fi network
+     "MCU WLAN Voltmeter". Connect the phone to it (password below), then
+     open the app and tap "ESP32 network (192.168.4.1)" under Wi-Fi.
+     No router needed. Android may report "no internet"; choose to stay
+     connected.
+
+  2. Existing network: the ESP32 joins your Wi-Fi. Phone and ESP32 must be
+     in the same network. The app finds the device automatically, or enter
+     the IP address shown in the Serial Monitor.
 
   Works on every ESP32, including the ESP32-S2 without Bluetooth.
-  Only 2.4 GHz networks are supported by the ESP32.
+  The ESP32 supports 2.4 GHz only.
 */
 #include <MCUi.h>
 
-// ---- Your Wi-Fi network ----
+#define USE_OWN_NETWORK 1
+
+// Own network: password with at least 8 characters
+const char *AP_PASSWORD = "mcui1234";
+
+// Existing network
 const char *WIFI_SSID = "MyNetwork";
 const char *WIFI_PASSWORD = "MyPassword";
 
@@ -37,9 +49,13 @@ void setup() {
   mcui.setRange("V", 0, 30);
   mcui.setDecimals("V", 2);
 
-  mcui.setDebug(Serial);  // shows the IP address in the Serial Monitor
+  mcui.setDebug(Serial);  // shows network and IP address in the Serial Monitor
   mcui.setFirmware("1.0");
+#if USE_OWN_NETWORK
+  mcui.beginWiFiAP("MCU WLAN Voltmeter", AP_PASSWORD);
+#else
   mcui.beginWiFi("MCU WLAN Voltmeter", WIFI_SSID, WIFI_PASSWORD);
+#endif
 }
 
 void loop() {

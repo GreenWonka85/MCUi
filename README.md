@@ -12,7 +12,8 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
   |---|---|---|---|
   | `begin("Name")` | Bluetooth LE | ESP32, ESP32-S3, -C3, -C6 | Android, iOS |
   | `beginClassic("Name")` | Bluetooth Classic | classic ESP32 only | Android |
-  | `beginWiFi("Name", ssid, password)` | Wi-Fi (TCP 4210, mDNS) | all ESP32, incl. -S2 | Android, iOS |
+  | `beginWiFi("Name", ssid, password)` | Wi-Fi in your network (TCP 4210, mDNS) | all ESP32, incl. -S2 | Android, iOS |
+  | `beginWiFiAP("Name", password)` | Own Wi-Fi network of the ESP32 (192.168.4.1) | all ESP32, incl. -S2 | Android, iOS |
 
 - Up to 24 channels: voltage, current, temperature, humidity, pressure and [many more types](docs/PROTOCOL.md#5-channel-types)
 - Power supply display with setpoints and CV/CC indicator, dual power supplies via groups
@@ -67,6 +68,7 @@ Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 | `begin(name)` | Starts Bluetooth LE with the device name |
 | `beginClassic(name)` | Starts Bluetooth Classic (classic ESP32 only) |
 | `beginWiFi(name, ssid, password)` | Joins the Wi-Fi network and waits for the app |
+| `beginWiFiAP(name, password)` | Opens its own Wi-Fi network (IP 192.168.4.1) |
 | `setDebug(Serial)` | Status messages (connection, IP address) in the Serial Monitor |
 | `addChannel(key, name, type, unit)` | Adds a measurement channel |
 | `setRange`, `setDecimals`, `setGroup`, `setPage` | Display hints for a channel |
@@ -98,7 +100,7 @@ Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom M
 
 **Erste Schritte:** Beispiel `01_Voltmeter` öffnen, hochladen, in der App auf *Suchen* tippen und das Gerät wählen.
 
-**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN (alle ESP32, auch S2).
+**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32, auch S2.
 
 **Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic.
 

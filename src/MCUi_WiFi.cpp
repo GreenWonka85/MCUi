@@ -1,5 +1,6 @@
 /*
   MCUi - Wi-Fi connection: TCP server on port 4210, discovery via mDNS (_mcui._tcp).
+  Either in an existing network (station) or as own network (access point, 192.168.4.1).
   License: MIT
 */
 #include "MCUi.h"
@@ -15,6 +16,7 @@ static WiFiServer *g_server = nullptr;
 static WiFiClient *g_client = nullptr;
 static bool g_wifiUp = false;
 static bool g_mdns = false;
+static bool g_apMode = false;
 static char g_host[20];
 
 static WiFiClient acceptClient() {
@@ -27,12 +29,47 @@ static WiFiClient acceptClient() {
 
 namespace mcui_internal {
 
-bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char *password) {
+static void makeHostName(MCUi *bench) {
   // Host name from the device ID, e.g. "mcui-a4cf12"
   const char *id = bench->_deviceId();
   size_t idLen = strlen(id);
   snprintf(g_host, sizeof(g_host), "mcui-%s", idLen >= 6 ? id + idLen - 6 : id);
   for (char *p = g_host; *p; p++) *p = (char)tolower(*p);
+}
+
+static void startServer() {
+  if (!g_server) g_server = new WiFiServer(MCUI_WIFI_PORT);
+  if (!g_client) g_client = new WiFiClient();
+  g_server->begin();
+  g_server->setNoDelay(true);
+}
+
+bool wifiBeginAP(MCUi *bench, const char *ssid, const char *password) {
+  makeHostName(bench);
+  g_apMode = true;
+  Print *dbg = bench->_debugOut();
+  // WPA2 needs at least 8 characters
+  if (password && strlen(password) < 8) {
+    if (dbg) dbg->println("MCUi: Wi-Fi password shorter than 8 characters, network stays open");
+    password = nullptr;
+  }
+  WiFi.mode(WIFI_AP);
+  bool ok = WiFi.softAP(ssid, password);
+  WiFi.setSleep(false);
+  startServer();
+  if (dbg) {
+    if (ok) {
+      dbg->printf("MCUi: Wi-Fi network \"%s\" %s, IP %s, port %d\n", ssid, password ? "(WPA2)" : "(open)",
+                  WiFi.softAPIP().toString().c_str(), MCUI_WIFI_PORT);
+    } else {
+      dbg->println("MCUi: could not start the Wi-Fi network");
+    }
+  }
+  return ok;
+}
+
+bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char *password) {
+  makeHostName(bench);
 
   if (ssid) {
     WiFi.setHostname(g_host);
@@ -43,10 +80,7 @@ bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char
   // No power saving: shorter delays for commands from the app
   WiFi.setSleep(false);
 
-  if (!g_server) g_server = new WiFiServer(MCUI_WIFI_PORT);
-  if (!g_client) g_client = new WiFiClient();
-  g_server->begin();
-  g_server->setNoDelay(true);
+  startServer();
 
   Print *dbg = bench->_debugOut();
   if (dbg) {
@@ -62,11 +96,11 @@ void wifiPoll(MCUi *bench) {
   Print *dbg = bench->_debugOut();
 
   // Network up or down
-  bool up = WiFi.status() == WL_CONNECTED;
+  bool up = g_apMode || WiFi.status() == WL_CONNECTED;
   if (up != g_wifiUp) {
     g_wifiUp = up;
     if (up) {
-      if (dbg) {
+      if (dbg && !g_apMode) {
         dbg->printf("MCUi: Wi-Fi connected, IP %s, port %d\n", WiFi.localIP().toString().c_str(), MCUI_WIFI_PORT);
       }
       if (!g_mdns && MDNS.begin(g_host)) {

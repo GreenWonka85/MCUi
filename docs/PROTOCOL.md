@@ -214,6 +214,8 @@ Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lin
 
 ### 6.3 Wi-Fi
 
+- Two modes: the device joins an existing network (station), or opens its own
+  network (access point) with the fixed address `192.168.4.1`.
 - The device is a TCP server on port `4210` and accepts one app at a time.
   A new connection replaces the previous one (for example after the phone changed networks).
 - Discovery via mDNS (DNS-SD): service `_mcui._tcp`, instance name = device name,

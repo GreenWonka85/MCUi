@@ -87,6 +87,11 @@ bool MCUi::beginWiFi(const char *deviceName) {
   return beginWiFi(deviceName, nullptr, nullptr);
 }
 
+bool MCUi::beginWiFiAP(const char *deviceName, const char *password, const char *ssid) {
+  initCommon(deviceName, LINK_WIFI);
+  return mcui_internal::wifiBeginAP(this, ssid ? ssid : deviceName, password);
+}
+
 void MCUi::setFirmware(const char *version) { _firmware = version; }
 
 void MCUi::setInterval(uint32_t ms) { _interval = ms < 20 ? 20 : ms; }

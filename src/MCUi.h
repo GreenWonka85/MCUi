@@ -8,7 +8,8 @@
 
     begin("Name")                     Bluetooth LE   ESP32, -S3, -C3, -C6
     beginClassic("Name")              Bluetooth      ESP32 only (Android only)
-    beginWiFi("Name", ssid, password) Wi-Fi          all ESP32 incl. -S2
+    beginWiFi("Name", ssid, password) Wi-Fi          all ESP32 incl. -S2 (existing network)
+    beginWiFiAP("Name", password)     Wi-Fi          all ESP32 incl. -S2 (own network)
 
   Minimal example:
 
@@ -91,6 +92,14 @@ public:
 
   /** Wi-Fi, if your sketch already connects to the network itself. */
   bool beginWiFi(const char *deviceName);
+
+  /**
+   * Wi-Fi access point: the ESP32 opens its own network, no router needed.
+   * Connect the phone to this network; the app reaches the ESP32 at 192.168.4.1.
+   * password: at least 8 characters, or nullptr for an open network.
+   * ssid: network name, default is the device name.
+   */
+  bool beginWiFiAP(const char *deviceName, const char *password = nullptr, const char *ssid = nullptr);
 
   /** Firmware version shown in the app (optional). */
   void setFirmware(const char *version);

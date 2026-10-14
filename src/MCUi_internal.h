@@ -23,6 +23,7 @@ void classicSend(const char *line, size_t len);
 
 // Wi-Fi (MCUi_WiFi.cpp)
 bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char *password);
+bool wifiBeginAP(MCUi *bench, const char *ssid, const char *password);
 void wifiPoll(MCUi *bench);
 void wifiSend(const char *line, size_t len);
 
