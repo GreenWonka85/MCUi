@@ -39,6 +39,10 @@ MCUi mcui;
 void setup() {
   Serial.begin(115200);
 
+  if (digitalPinToAnalogChannel(ADC_PIN) < 0) {
+    Serial.printf("ADC_PIN %d is not an analog input on this board. Please change ADC_PIN.\n", ADC_PIN);
+  }
+
   mcui.addChannel("V", "Voltage", "voltage");
   mcui.setRange("V", 0, 30);
   mcui.setDecimals("V", 2);
@@ -50,12 +54,14 @@ void setup() {
 }
 
 void loop() {
-  // Average 16 readings for a calm display
-  uint32_t sum = 0;
-  for (int i = 0; i < 16; i++) sum += analogReadMilliVolts(ADC_PIN);
-  float volts = (sum / 16.0) / 1000.0 * DIVIDER;
-
-  mcui.set("V", volts);
+  // A wrong pin would flood the serial port with error messages, so skip it
+  if (digitalPinToAnalogChannel(ADC_PIN) >= 0) {
+    // Average 16 readings for a calm display
+    uint32_t sum = 0;
+    for (int i = 0; i < 16; i++) sum += analogReadMilliVolts(ADC_PIN);
+    float volts = (sum / 16.0) / 1000.0 * DIVIDER;
+    mcui.set("V", volts);
+  }
   mcui.update();
   delay(10);
 }
