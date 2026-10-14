@@ -211,7 +211,10 @@ Nordic UART Service (NUS):
 Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lines as above.
 
 - Only the classic ESP32 supports Bluetooth Classic. iOS does not allow SPP for apps.
-- The device is paired once in the Android Bluetooth settings; the app lists paired devices.
+- The device is paired once in the Android Bluetooth settings.
+- Class of Device as MCUi marker: major class "uncategorized" (0x1F), minor class 0x2A
+  (Android `BluetoothClass.getDeviceClass()` = `0x1FA8`). The app lists only paired devices
+  with this class, or devices that answered with this protocol before.
 - No packet size limit: `mtu` in `HELLO` is ignored.
 
 ### 6.3 Wi-Fi

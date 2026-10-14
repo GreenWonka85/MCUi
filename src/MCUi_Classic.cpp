@@ -11,6 +11,11 @@
 #if defined(CONFIG_BT_ENABLED) && defined(CONFIG_BLUEDROID_ENABLED) && defined(SOC_BT_CLASSIC_SUPPORTED) && SOC_BT_CLASSIC_SUPPORTED
 
 #include <BluetoothSerial.h>
+#include "esp_gap_bt_api.h"
+
+// Class of Device as MCUi marker: major class "uncategorized", minor class 0x2A.
+// The app reads it from paired devices without connecting (Android: 0x1FA8).
+#define MCUI_COD_MINOR 0x2A
 
 static BluetoothSerial *g_bt = nullptr;
 static bool g_hadClient = false;
@@ -19,7 +24,12 @@ namespace mcui_internal {
 
 bool classicBegin(MCUi *, const char *deviceName) {
   if (!g_bt) g_bt = new BluetoothSerial();
-  return g_bt->begin(deviceName);
+  if (!g_bt->begin(deviceName)) return false;
+  esp_bt_cod_t cod = {};
+  cod.major = ESP_BT_COD_MAJOR_DEV_UNCATEGORIZED;
+  cod.minor = MCUI_COD_MINOR;
+  esp_bt_gap_set_cod(cod, ESP_BT_SET_COD_MAJOR_MINOR);
+  return true;
 }
 
 void classicPoll(MCUi *bench) {

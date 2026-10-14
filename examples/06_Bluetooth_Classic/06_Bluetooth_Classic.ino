@@ -12,6 +12,8 @@
 
   First pair the ESP32 once in the Android Bluetooth settings
   ("MCU Classic"). It then appears in the app under "Bluetooth (paired)".
+  If it was paired with an older library version, remove the pairing
+  and pair again, so Android learns the MCUi device class.
 */
 #include <MCUi.h>
 
