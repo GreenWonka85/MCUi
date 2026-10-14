@@ -35,7 +35,7 @@ void setup() {
 }
 
 void loop() {
-  mcui.set("V", analogReadMilliVolts(34) / 1000.0 * 11);
+  mcui.set("V", analogReadMilliVolts(4) / 1000.0 * 11);  // GPIO 4, divider 1:11
   mcui.update();
 }
 ```

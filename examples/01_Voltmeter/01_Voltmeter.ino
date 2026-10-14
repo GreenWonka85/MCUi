@@ -8,18 +8,28 @@
 
     Input + ---[ R1 100k ]---+---[ R2 10k ]--- GND
                              |
-                         GPIO 34 (ADC)
+                          ADC pin
 
   The ESP32 ADC measures up to approx. 3.1 V. With 100k / 10k the
   divider factor is 11, so the maximum input is approx. 34 V.
   Never apply more than 3.3 V directly to the pin.
 
-  Board: any ESP32 with Bluetooth (ESP32, ESP32-S3, ESP32-C3, ESP32-C6).
-  For ESP32-C3/C6/S3 choose an ADC pin of your board (e.g. GPIO 2 or 4).
+  Board: any ESP32 with Bluetooth. The ADC pin is chosen automatically:
+    ESP32     GPIO 34
+    ESP32-S3  GPIO 4
+    ESP32-C3  GPIO 3
+    ESP32-C6  GPIO 3
+  You can change ADC_PIN below to any ADC1 pin of your board.
 */
 #include <MCUi.h>
 
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+const int ADC_PIN = 4;
+#elif defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)
+const int ADC_PIN = 3;
+#else
 const int ADC_PIN = 34;
+#endif
 const float R1 = 100000.0;  // Ohm, upper resistor
 const float R2 = 10000.0;   // Ohm, lower resistor
 const float DIVIDER = (R1 + R2) / R2;
