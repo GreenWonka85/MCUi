@@ -17,6 +17,7 @@ static WiFiClient *g_client = nullptr;
 static bool g_wifiUp = false;
 static bool g_mdns = false;
 static bool g_apMode = false;
+static uint32_t g_lastRssiTxt = 0;
 static char g_host[20];
 
 static WiFiClient acceptClient() {
@@ -113,6 +114,16 @@ void wifiPoll(MCUi *bench) {
     } else if (dbg) {
       dbg->println("MCUi: Wi-Fi lost, reconnecting ...");
     }
+  }
+
+  // Signal strength to the router as mDNS TXT record "rssi", so the app can show it
+  // in the device list (only in an existing network; in access point mode the phone
+  // measures the signal itself)
+  if (g_mdns && !g_apMode && up && millis() - g_lastRssiTxt > 5000) {
+    g_lastRssiTxt = millis();
+    char rssi[8];
+    snprintf(rssi, sizeof(rssi), "%d", (int)WiFi.RSSI());
+    MDNS.addServiceTxt("mcui", "tcp", "rssi", rssi);
   }
 
   // New app connection. It replaces an older one, e.g. after the phone lost Wi-Fi.

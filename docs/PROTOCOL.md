@@ -224,7 +224,8 @@ Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lin
 - The device is a TCP server on port `4210` and accepts one app at a time.
   A new connection replaces the previous one (for example after the phone changed networks).
 - Discovery via mDNS (DNS-SD): service `_mcui._tcp`, instance name = device name,
-  TXT records `id` (device ID) and `name`. Host name `mcui-<last 6 hex digits of the ID>`.
+  TXT records `id` (device ID), `name` and, in an existing network, `rssi`
+  (signal strength to the router in dBm, updated every 5 s). Host name `mcui-<last 6 hex digits of the ID>`.
 - If mDNS is blocked by the network, the app connects by IP address.
 - Same lines as above, no packet size limit.
 - The app sends `PING` every 3 s. If no line arrives for 10 s, the app treats
