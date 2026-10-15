@@ -121,8 +121,10 @@ void wifiPoll(MCUi *bench) {
   // measures the signal itself)
   if (g_mdns && !g_apMode && up && millis() - g_lastRssiTxt > 5000) {
     g_lastRssiTxt = millis();
-    char rssi[8];
-    snprintf(rssi, sizeof(rssi), "%d", (int)WiFi.RSSI());
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d", (int)WiFi.RSSI());
+    // const char* for all four arguments, otherwise the call is ambiguous
+    const char *rssi = buf;
     MDNS.addServiceTxt("mcui", "tcp", "rssi", rssi);
   }
 
