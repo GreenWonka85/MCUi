@@ -4,12 +4,14 @@
   Protocol: docs/PROTOCOL.md
   License:  MIT
 
-  Version 0.3: connections
+  Version 0.4: connections
 
-    begin("Name")                     Bluetooth LE      ESP32, -S3, -C3, -C6
+    begin("Name")                     Bluetooth LE      ESP32, -S3, -C3, -C6; with ArduinoBLE:
+                                                        Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi,
+                                                        Nano RP2040 Connect
     beginClassic("Name")              Bluetooth         ESP32 only (Android only)
-    beginWiFi("Name", ssid, password) Wi-Fi (network)   ESP32 (all), ESP8266
-    beginWiFiAP("Name", password)     Wi-Fi (own net)   ESP32 (all), ESP8266
+    beginWiFi("Name", ssid, password) Wi-Fi (network)   ESP32 (all), ESP8266, Pico W
+    beginWiFiAP("Name", password)     Wi-Fi (own net)   ESP32 (all), ESP8266, Pico W
     beginSerial(port, "Name")         any serial module every board: Arduino Uno/Nano/Mega,
                                       (BT-06, HC-05,    STM32, RP2040, ... with a Bluetooth
                                       ESP-01 bridge)    module or an ESP-01 as Wi-Fi bridge
@@ -90,7 +92,7 @@
 #endif
 
 #define MCUI_PROTOCOL_VERSION 1
-#define MCUI_LIBRARY_VERSION "0.3.0"
+#define MCUI_LIBRARY_VERSION "0.4.0"
 
 #ifndef MCUI_WIFI_PORT
 #define MCUI_WIFI_PORT 4210
@@ -106,7 +108,11 @@ public:
   // ------------------------------------------------------------ Setup
   // Start ONE of the connections below, after defining channels and controls.
 
-  /** Bluetooth LE built in (ESP32, ESP32-S3, -C3, -C6). Works with Android and iOS. */
+  /**
+   * Bluetooth LE. Works with Android and iOS.
+   * ESP32, -S3, -C3, -C6: built in. Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi,
+   * Nano RP2040 Connect: install "ArduinoBLE" and #include <ArduinoBLE.h> before <MCUi.h>.
+   */
   bool begin(const char *deviceName);
 
   /**

@@ -11,10 +11,11 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
   | Board | Connection | Call |
   |---|---|---|
   | ESP32, ESP32-S3, -C3, -C6 | Bluetooth LE built in | `begin("Name")` |
+  | Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi, Nano RP2040 Connect | Bluetooth LE built in (ArduinoBLE) | `#include <ArduinoBLE.h>`, then `begin("Name")` |
   | ESP32 (classic) | Bluetooth Classic built in (Android) | `beginClassic("Name")` |
-  | ESP32 (all), ESP8266 (NodeMCU, Wemos D1 mini, ESP-01) | Wi-Fi in your network | `beginWiFi("Name", ssid, password)` |
-  | ESP32 (all), ESP8266 | own Wi-Fi network (192.168.4.1) | `beginWiFiAP("Name", password)` |
-  | Arduino Uno, Nano, Mega, Leonardo, STM32, RP2040, ... | Bluetooth module (BT-06, HC-05, HC-06) or ESP-01 as Wi-Fi bridge | `beginSerial(port, "Name")` |
+  | ESP32 (all), ESP8266 (NodeMCU, Wemos D1 mini, ESP-01), Raspberry Pi Pico W | Wi-Fi in your network | `beginWiFi("Name", ssid, password)` |
+  | ESP32 (all), ESP8266, Raspberry Pi Pico W | own Wi-Fi network (192.168.4.1) | `beginWiFiAP("Name", password)` |
+  | Arduino Uno, Nano, Mega, Leonardo, STM32, RP2040, ... | Bluetooth LE module (HM-10, AT-09), Bluetooth module (BT-06, HC-05, HC-06) or ESP-01 as Wi-Fi bridge | `beginSerial(port, "Name")` |
 
 - Wi-Fi is found automatically (mDNS); the app also connects by IP address.
 - Up to 24 channels (8 on Uno/Nano/Mega because of their small RAM): voltage, current, temperature, humidity, pressure and [many more types](docs/PROTOCOL.md#5-channel-types)
@@ -63,7 +64,8 @@ Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 | `05_WLAN_Voltmeter` | Voltmeter over Wi-Fi |
 | `06_Bluetooth_Classic` | Simulated signal over Bluetooth Classic (classic ESP32, Android) |
 | `07_ESP01_WLAN_Bruecke` | Sketch for an ESP-01: turns it into a Wi-Fi module for any board |
-| `08_Arduino_mit_Funkmodul` | Uno/Nano/Mega/STM32 voltmeter with BT-06 or ESP-01, incl. wiring |
+| `08_Arduino_mit_Funkmodul` | Uno/Nano/Mega/STM32 voltmeter with HM-10, BT-06 or ESP-01, incl. wiring |
+| `09_ArduinoBLE_Voltmeter` | Voltmeter for Nano 33 BLE/IoT, UNO R4 WiFi, Nano RP2040 Connect |
 
 ## API overview
 
@@ -105,9 +107,9 @@ Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom M
 
 **Erste Schritte:** Beispiel `01_Voltmeter` öffnen, hochladen, in der App auf *Suchen* tippen und das Gerät wählen.
 
-**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32 und dem ESP8266. Alle anderen Boards (Arduino Uno, Nano, Mega, STM32, RP2040 ...) nutzen `beginSerial(port, "Name")` mit einem Bluetooth-Modul (BT-06, HC-05) oder einem ESP-01 als WLAN-Brücke (Beispiele 07 und 08).
+**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32 und dem ESP8266. Der Raspberry Pi Pico W kann ebenfalls WLAN. Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi und Nano RP2040 Connect nutzen Bluetooth LE über die Bibliothek ArduinoBLE (`#include <ArduinoBLE.h>` vor `<MCUi.h>`, Beispiel 09). Alle anderen Boards (Arduino Uno, Nano, Mega, STM32 ...) nutzen `beginSerial(port, "Name")` mit einem Funkmodul: HM-10 oder AT-09 (Bluetooth LE), BT-06 oder HC-05 (Bluetooth Classic) oder ESP-01 als WLAN-Brücke (Beispiele 07 und 08).
 
-**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic, ESP-01 als WLAN-Brücke, Arduino mit Funkmodul.
+**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic, ESP-01 als WLAN-Brücke, Arduino mit Funkmodul, Boards mit ArduinoBLE.
 
 **Wichtig:** Schlüssel, Namen, Einheiten und Optionslisten werden als Zeiger gespeichert. Bitte Zeichenketten-Literale (`"V"`) oder globale bzw. statische Puffer verwenden, keine temporären `String`-Objekte.
 

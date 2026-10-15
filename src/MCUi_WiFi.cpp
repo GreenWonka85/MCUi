@@ -1,19 +1,29 @@
 /*
   MCUi - Wi-Fi connection: TCP server on port 4210, discovery via mDNS (_mcui._tcp).
   Either in an existing network (station) or as own network (access point, 192.168.4.1).
+  Boards: ESP32 (all), ESP8266, Raspberry Pi Pico W / Pico 2 W.
   License: MIT
 */
 #include "MCUi.h"
 #include "MCUi_internal.h"
 
-#if defined(ESP32) || defined(ESP8266)
+// Raspberry Pi Pico W / Pico 2 W with the core "Raspberry Pi Pico/RP2040" (Earle Philhower)
+#if defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED) && \
+    (defined(ARDUINO_RASPBERRY_PI_PICO_W) || defined(ARDUINO_RASPBERRY_PI_PICO_2W) || defined(PICO_CYW43_SUPPORTED))
+#define MCUI_PICO_W 1
+#endif
+
+#if defined(ESP32) || defined(ESP8266) || defined(MCUI_PICO_W)
 
 #if defined(ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#else
+#elif defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
+#else
+#include <WiFi.h>
+#include <LEAmDNS.h>
 #endif
 
 #if __has_include(<esp_arduino_version.h>)
@@ -31,7 +41,7 @@ static uint32_t g_lastRssiTxt = 0;
 static char g_host[20];
 
 static WiFiClient acceptClient() {
-#if defined(ESP8266) || (defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3)
+#if defined(ESP8266) || defined(MCUI_PICO_W) || (defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3)
   return g_server->accept();
 #else
   return g_server->available();
@@ -51,6 +61,8 @@ static void makeHostName(MCUi *bench) {
 static void noSleep() {
 #if defined(ESP8266)
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#elif defined(MCUI_PICO_W)
+  WiFi.noLowPowerMode();
 #else
   WiFi.setSleep(false);
 #endif
@@ -97,7 +109,9 @@ bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char
     WiFi.setHostname(g_host);
 #endif
     WiFi.mode(WIFI_STA);
+#if !defined(MCUI_PICO_W)
     WiFi.setAutoReconnect(true);
+#endif
     WiFi.begin(ssid, password);
   }
   // No power saving: shorter delays for commands from the app
@@ -116,7 +130,7 @@ bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char
 
 void wifiPoll(MCUi *bench) {
   if (!g_server) return;
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(MCUI_PICO_W)
   if (g_mdns) MDNS.update();
 #endif
   Print *dbg = bench->_debugOut();
@@ -202,7 +216,7 @@ void wifiSend(const char *line, size_t len) {
 
 }  // namespace mcui_internal
 
-#else  // no built-in Wi-Fi (AVR, STM32, ...): use an ESP-01 bridge with beginSerial()
+#else  // no supported Wi-Fi (AVR, STM32, ...): use an ESP-01 bridge with beginSerial()
 
 namespace mcui_internal {
 bool wifiBegin(MCUi *, const char *, const char *, const char *) { return false; }

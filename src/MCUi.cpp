@@ -6,6 +6,9 @@
 #include "MCUi.h"
 #include "MCUi_internal.h"
 #include <math.h>
+#if defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED) && __has_include(<pico/unique_id.h>)
+#include <pico/unique_id.h>
+#endif
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
@@ -111,6 +114,10 @@ void MCUi::initCommon(const char *deviceName, Link link) {
 #elif defined(ESP8266)
   snprintf(_id, sizeof(_id), "%06lX%06lX", (unsigned long)(ESP.getChipId() & 0xFFFFFF),
            (unsigned long)(ESP.getFlashChipId() & 0xFFFFFF));
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED) && __has_include(<pico/unique_id.h>)
+  pico_unique_board_id_t uid;
+  pico_get_unique_board_id(&uid);
+  snprintf(_id, sizeof(_id), "%02X%02X%02X%02X%02X%02X", uid.id[2], uid.id[3], uid.id[4], uid.id[5], uid.id[6], uid.id[7]);
 #elif defined(ARDUINO_ARCH_STM32)
   uint32_t w0 = HAL_GetUIDw0(), w1 = HAL_GetUIDw1(), w2 = HAL_GetUIDw2();
   snprintf(_id, sizeof(_id), "%04X%08lX", (unsigned)((w0 ^ w2) & 0xFFFF), (unsigned long)w1);
@@ -142,7 +149,7 @@ bool MCUi::begin(const char *deviceName) {
       _debug->print(_id);
       _debug->println(')');
     } else {
-      _debug->println(F("MCUi: this board has no built-in Bluetooth LE. Use a module with beginSerial()."));
+      _debug->println(F("MCUi: no Bluetooth LE. ESP32: built in. Nano 33 BLE/IoT, UNO R4 WiFi, Nano RP2040 Connect: install ArduinoBLE and #include <ArduinoBLE.h>. Other boards: module with beginSerial()."));
     }
   }
   return ok;
@@ -431,7 +438,9 @@ void MCUi::_onReceive(const uint8_t *data, size_t len) {
 
 void MCUi::update() {
   // Classic and Wi-Fi are polled here, Bluetooth LE uses callbacks
-  if (_link == LINK_CLASSIC) {
+  if (_link == LINK_BLE) {
+    mcui_internal::blePoll(this);
+  } else if (_link == LINK_CLASSIC) {
     mcui_internal::classicPoll(this);
   } else if (_link == LINK_WIFI) {
     mcui_internal::wifiPoll(this);

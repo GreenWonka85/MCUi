@@ -235,6 +235,8 @@ Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lin
 
 Boards without built-in radio use a module on a serial port (UART), default 9600 baud:
 
+- Bluetooth LE modules (HM-10, AT-09, HM-19): service `FFE0`, characteristic `FFE1` for both
+  directions, 20 bytes per packet. The app lists them when their name starts with `MCUi`.
 - Bluetooth Classic modules (BT-06, HC-05, HC-06): the app connects via SPP (6.2).
   The app lists paired modules whose name starts with `MCUi`.
 - ESP-01 with the MCUi bridge sketch: the bridge acts as Wi-Fi device (6.3) and passes

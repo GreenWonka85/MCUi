@@ -11,10 +11,12 @@ class MCUi;
 
 namespace mcui_internal {
 
-// Bluetooth LE (MCUi_BLE.cpp)
+// Bluetooth LE (MCUi_BLE.cpp): ESP32 built in, other boards with ArduinoBLE
 bool bleBegin(MCUi *bench, const char *deviceName);
 /** Sends one line plus '\n', split into packets of at most `chunk` bytes. */
 void bleSend(const char *line, size_t len, uint16_t chunk);
+/** Lets the BLE stack work (ArduinoBLE needs BLE.poll()). */
+void blePoll(MCUi *bench);
 
 // Bluetooth Classic (MCUi_Classic.cpp)
 bool classicBegin(MCUi *bench, const char *deviceName);
