@@ -4,12 +4,15 @@
   Protocol: docs/PROTOCOL.md
   License:  MIT
 
-  Version 0.2: Bluetooth LE, Bluetooth Classic and Wi-Fi on ESP32.
+  Version 0.3: connections
 
-    begin("Name")                     Bluetooth LE   ESP32, -S3, -C3, -C6
-    beginClassic("Name")              Bluetooth      ESP32 only (Android only)
-    beginWiFi("Name", ssid, password) Wi-Fi          all ESP32 incl. -S2 (existing network)
-    beginWiFiAP("Name", password)     Wi-Fi          all ESP32 incl. -S2 (own network)
+    begin("Name")                     Bluetooth LE      ESP32, -S3, -C3, -C6
+    beginClassic("Name")              Bluetooth         ESP32 only (Android only)
+    beginWiFi("Name", ssid, password) Wi-Fi (network)   ESP32 (all), ESP8266
+    beginWiFiAP("Name", password)     Wi-Fi (own net)   ESP32 (all), ESP8266
+    beginSerial(port, "Name")         any serial module every board: Arduino Uno/Nano/Mega,
+                                      (BT-06, HC-05,    STM32, RP2040, ... with a Bluetooth
+                                      ESP-01 bridge)    module or an ESP-01 as Wi-Fi bridge
 
   Minimal example:
 
@@ -35,9 +38,6 @@
 
 #include <Arduino.h>
 
-#if !defined(ESP32)
-#error "MCUi supports ESP32 boards only. Other boards follow in a later version."
-#endif
 
 // ESP32-S3/C3/C6 with "USB CDC On Boot" on core 2.x: writes to the USB serial
 // port block while no Serial Monitor is open. Bluetooth then stalls as well.
@@ -50,16 +50,47 @@
 #warning "MCUi: ESP32 core 2.x with USB CDC On Boot: the sketch stalls without an open Serial Monitor. Please update the ESP32 core to 3.x or set Tools > USB CDC On Boot > Disabled."
 #endif
 
+// Sizes. Small boards (AVR: Uno, Nano, Mega) get smaller defaults because of
+// their little RAM. All values can be set before #include <MCUi.h>.
+#if defined(__AVR__)
+#define MCUI_DEFAULT_CHANNELS 8
+#define MCUI_DEFAULT_CONTROLS 4
+#define MCUI_DEFAULT_RX 64
+#define MCUI_DEFAULT_IN_LINE 96
+#define MCUI_DEFAULT_OUT_LINE 160
+#else
+#define MCUI_DEFAULT_CHANNELS 24
+#define MCUI_DEFAULT_CONTROLS 16
+#define MCUI_DEFAULT_RX 512
+#define MCUI_DEFAULT_IN_LINE 256
+#define MCUI_DEFAULT_OUT_LINE 512
+#endif
+
 #ifndef MCUI_MAX_CHANNELS
-#define MCUI_MAX_CHANNELS 24
+#define MCUI_MAX_CHANNELS MCUI_DEFAULT_CHANNELS
 #endif
 
 #ifndef MCUI_MAX_CONTROLS
-#define MCUI_MAX_CONTROLS 16
+#define MCUI_MAX_CONTROLS MCUI_DEFAULT_CONTROLS
+#endif
+
+/** Receive buffer for commands from the app (bytes). */
+#ifndef MCUI_RX_SIZE
+#define MCUI_RX_SIZE MCUI_DEFAULT_RX
+#endif
+
+/** Longest command line from the app. */
+#ifndef MCUI_IN_LINE
+#define MCUI_IN_LINE MCUI_DEFAULT_IN_LINE
+#endif
+
+/** Longest line to the app (announcement, data). */
+#ifndef MCUI_OUT_LINE
+#define MCUI_OUT_LINE MCUI_DEFAULT_OUT_LINE
 #endif
 
 #define MCUI_PROTOCOL_VERSION 1
-#define MCUI_LIBRARY_VERSION "0.2.2"
+#define MCUI_LIBRARY_VERSION "0.3.0"
 
 #ifndef MCUI_WIFI_PORT
 #define MCUI_WIFI_PORT 4210
@@ -75,7 +106,7 @@ public:
   // ------------------------------------------------------------ Setup
   // Start ONE of the connections below, after defining channels and controls.
 
-  /** Bluetooth LE (ESP32, ESP32-S3, -C3, -C6). Works with Android and iOS. */
+  /** Bluetooth LE built in (ESP32, ESP32-S3, -C3, -C6). Works with Android and iOS. */
   bool begin(const char *deviceName);
 
   /**
@@ -100,6 +131,21 @@ public:
    * ssid: network name, default is the device name.
    */
   bool beginWiFiAP(const char *deviceName, const char *password = nullptr, const char *ssid = nullptr);
+
+  /**
+   * Any serial connection: a Bluetooth module (BT-06, HC-05, HC-06) or an
+   * ESP-01 with the MCUi bridge sketch (example 07). Works on every board.
+   * port: Serial1, a SoftwareSerial, ... started with begin(baud) beforehand.
+   * Do not use the same port for setDebug().
+   */
+  bool beginSerial(Stream &port, const char *deviceName);
+
+  /**
+   * Device ID shown to the app (12 hex digits). Set automatically from the
+   * chip on ESP32, ESP8266 and STM32, otherwise derived from the device name.
+   * Call before begin...() if you need a fixed ID.
+   */
+  void setDeviceId(const char *id);
 
   /** Firmware version shown in the app (optional). */
   void setFirmware(const char *version);
@@ -207,7 +253,7 @@ private:
     char value[24];
   };
 
-  enum Link : uint8_t { LINK_NONE, LINK_BLE, LINK_CLASSIC, LINK_WIFI };
+  enum Link : uint8_t { LINK_NONE, LINK_BLE, LINK_CLASSIC, LINK_WIFI, LINK_SERIAL };
 
   void initCommon(const char *deviceName, Link link);
   Channel *findChannel(const char *key);
@@ -232,6 +278,8 @@ private:
   uint32_t _connectedAt = 0;
   uint16_t _chunk = 20;
   Link _link = LINK_NONE;
+  Stream *_serial = nullptr;
+  bool _idSet = false;
   ControlCallback _callback = nullptr;
   Print *_debug = nullptr;
 
@@ -241,10 +289,10 @@ private:
   bool _helloSeen = false;
 
   // Receive ring buffer (filled from the Bluetooth task or update())
-  static const uint16_t RX_SIZE = 512;
+  static const uint16_t RX_SIZE = MCUI_RX_SIZE;
   uint8_t _rx[RX_SIZE];
   volatile uint16_t _rxHead = 0;
   volatile uint16_t _rxTail = 0;
-  char _line[256];
+  char _line[MCUI_IN_LINE];
   uint16_t _lineLen = 0;
 };

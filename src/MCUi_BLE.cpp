@@ -4,9 +4,12 @@
 */
 #include "MCUi.h"
 #include "MCUi_internal.h"
-#include "sdkconfig.h"
 
-#if defined(CONFIG_BT_ENABLED)
+#if defined(ESP32)
+#include "sdkconfig.h"
+#endif
+
+#if defined(ESP32) && defined(CONFIG_BT_ENABLED)
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -97,7 +100,7 @@ void bleSend(const char *line, size_t len, uint16_t chunk) {
 
 }  // namespace mcui_internal
 
-#else  // no Bluetooth (e.g. ESP32-S2)
+#else  // no built-in Bluetooth LE (ESP32-S2, ESP8266, AVR, STM32, ...)
 
 namespace mcui_internal {
 bool bleBegin(MCUi *, const char *) { return false; }

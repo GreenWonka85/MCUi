@@ -231,6 +231,20 @@ Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lin
 - The app sends `PING` every 3 s. If no line arrives for 10 s, the app treats
   the connection as lost and reconnects.
 
+### 6.4 Serial radio modules (any board)
+
+Boards without built-in radio use a module on a serial port (UART), default 9600 baud:
+
+- Bluetooth Classic modules (BT-06, HC-05, HC-06): the app connects via SPP (6.2).
+  The app lists paired modules whose name starts with `MCUi`.
+- ESP-01 with the MCUi bridge sketch: the bridge acts as Wi-Fi device (6.3) and passes
+  all bytes 1:1 to the serial port.
+
+A serial module cannot report whether the app is connected. The device therefore sends
+data all the time and answers every `HELLO` with the announcement. The app repeats `HELLO`
+up to four times every 2.5 s until an announcement arrives, because simple boards
+(SoftwareSerial) cannot receive while they send.
+
 ## 7. Example: dual power supply
 
 ```

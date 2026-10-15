@@ -4,18 +4,20 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
 
 *Deutsch: siehe unten.*
 
-## Features (version 0.2)
+## Features (version 0.3)
 
-- Three connections, chosen in the sketch:
+- Works with (almost) every board:
 
-  | Call | Connection | Boards | App |
-  |---|---|---|---|
-  | `begin("Name")` | Bluetooth LE | ESP32, ESP32-S3, -C3, -C6 | Android, iOS |
-  | `beginClassic("Name")` | Bluetooth Classic | classic ESP32 only | Android |
-  | `beginWiFi("Name", ssid, password)` | Wi-Fi in your network (TCP 4210, mDNS) | all ESP32, incl. -S2 | Android, iOS |
-  | `beginWiFiAP("Name", password)` | Own Wi-Fi network of the ESP32 (192.168.4.1) | all ESP32, incl. -S2 | Android, iOS |
+  | Board | Connection | Call |
+  |---|---|---|
+  | ESP32, ESP32-S3, -C3, -C6 | Bluetooth LE built in | `begin("Name")` |
+  | ESP32 (classic) | Bluetooth Classic built in (Android) | `beginClassic("Name")` |
+  | ESP32 (all), ESP8266 (NodeMCU, Wemos D1 mini, ESP-01) | Wi-Fi in your network | `beginWiFi("Name", ssid, password)` |
+  | ESP32 (all), ESP8266 | own Wi-Fi network (192.168.4.1) | `beginWiFiAP("Name", password)` |
+  | Arduino Uno, Nano, Mega, Leonardo, STM32, RP2040, ... | Bluetooth module (BT-06, HC-05, HC-06) or ESP-01 as Wi-Fi bridge | `beginSerial(port, "Name")` |
 
-- Up to 24 channels: voltage, current, temperature, humidity, pressure and [many more types](docs/PROTOCOL.md#5-channel-types)
+- Wi-Fi is found automatically (mDNS); the app also connects by IP address.
+- Up to 24 channels (8 on Uno/Nano/Mega because of their small RAM): voltage, current, temperature, humidity, pressure and [many more types](docs/PROTOCOL.md#5-channel-types)
 - Power supply display with setpoints and CV/CC indicator, dual power supplies via groups
 - Controls in the app: switch, button, slider, number input, selection list
 - The app computes power and energy automatically from voltage and current
@@ -25,7 +27,7 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
 
 1. Arduino IDE: *Sketch > Include Library > Add .ZIP Library...* and select the ZIP of this repository (*Code > Download ZIP* on GitHub).
    Or copy the folder into `Documents/Arduino/libraries/MCUi`.
-2. ESP32 board package (Espressif) version 3.x. Version 2.0.11 or newer works on the classic ESP32.
+2. ESP32: board package (Espressif) version 3.x. ESP8266: board package "esp8266 by ESP8266 Community". All other boards: their usual board package.
 
 **ESP32-S3, -C3, -C6 on core 2.x:** with *USB CDC On Boot: Enabled* the sketch stalls as long as no Serial Monitor is open, and Bluetooth stops working too. This is a known issue of core 2.x, fixed in 3.0.0. Update the core to 3.x, or set *Tools > USB CDC On Boot > Disabled*. Also set *Tools > Core Debug Level > None*.
 
@@ -60,6 +62,8 @@ Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 | `04_Bedienelemente` | Switch, slider, selection list and button control LEDs |
 | `05_WLAN_Voltmeter` | Voltmeter over Wi-Fi |
 | `06_Bluetooth_Classic` | Simulated signal over Bluetooth Classic (classic ESP32, Android) |
+| `07_ESP01_WLAN_Bruecke` | Sketch for an ESP-01: turns it into a Wi-Fi module for any board |
+| `08_Arduino_mit_Funkmodul` | Uno/Nano/Mega/STM32 voltmeter with BT-06 or ESP-01, incl. wiring |
 
 ## API overview
 
@@ -69,6 +73,7 @@ Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 | `beginClassic(name)` | Starts Bluetooth Classic (classic ESP32 only) |
 | `beginWiFi(name, ssid, password)` | Joins the Wi-Fi network and waits for the app |
 | `beginWiFiAP(name, password)` | Opens its own Wi-Fi network (IP 192.168.4.1) |
+| `beginSerial(port, name)` | Any serial radio module (BT-06, HC-05, ESP-01 bridge) |
 | `setDebug(Serial)` | Status messages (connection, IP address) in the Serial Monitor |
 | `addChannel(key, name, type, unit)` | Adds a measurement channel |
 | `setRange`, `setDecimals`, `setGroup`, `setPage` | Display hints for a channel |
@@ -100,9 +105,9 @@ Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom M
 
 **Erste Schritte:** Beispiel `01_Voltmeter` öffnen, hochladen, in der App auf *Suchen* tippen und das Gerät wählen.
 
-**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32, auch S2.
+**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32 und dem ESP8266. Alle anderen Boards (Arduino Uno, Nano, Mega, STM32, RP2040 ...) nutzen `beginSerial(port, "Name")` mit einem Bluetooth-Modul (BT-06, HC-05) oder einem ESP-01 als WLAN-Brücke (Beispiele 07 und 08).
 
-**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic.
+**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic, ESP-01 als WLAN-Brücke, Arduino mit Funkmodul.
 
 **Wichtig:** Schlüssel, Namen, Einheiten und Optionslisten werden als Zeiger gespeichert. Bitte Zeichenketten-Literale (`"V"`) oder globale bzw. statische Puffer verwenden, keine temporären `String`-Objekte.
 

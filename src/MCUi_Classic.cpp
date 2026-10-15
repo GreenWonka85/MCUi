@@ -5,10 +5,13 @@
 */
 #include "MCUi.h"
 #include "MCUi_internal.h"
+
+#if defined(ESP32)
 #include "sdkconfig.h"
 #include "soc/soc_caps.h"
+#endif
 
-#if defined(CONFIG_BT_ENABLED) && defined(CONFIG_BLUEDROID_ENABLED) && defined(SOC_BT_CLASSIC_SUPPORTED) && SOC_BT_CLASSIC_SUPPORTED
+#if defined(ESP32) && defined(CONFIG_BT_ENABLED) && defined(CONFIG_BLUEDROID_ENABLED) && defined(SOC_BT_CLASSIC_SUPPORTED) && SOC_BT_CLASSIC_SUPPORTED
 
 #include <BluetoothSerial.h>
 #include "esp_gap_bt_api.h"

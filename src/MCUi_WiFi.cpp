@@ -5,8 +5,16 @@
 */
 #include "MCUi.h"
 #include "MCUi_internal.h"
+
+#if defined(ESP32) || defined(ESP8266)
+
+#if defined(ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#else
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#endif
 
 #if __has_include(<esp_arduino_version.h>)
 #include <esp_arduino_version.h>
@@ -17,11 +25,13 @@ static WiFiClient *g_client = nullptr;
 static bool g_wifiUp = false;
 static bool g_mdns = false;
 static bool g_apMode = false;
+#if defined(ESP32)
 static uint32_t g_lastRssiTxt = 0;
+#endif
 static char g_host[20];
 
 static WiFiClient acceptClient() {
-#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+#if defined(ESP8266) || (defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3)
   return g_server->accept();
 #else
   return g_server->available();
@@ -36,6 +46,14 @@ static void makeHostName(MCUi *bench) {
   size_t idLen = strlen(id);
   snprintf(g_host, sizeof(g_host), "mcui-%s", idLen >= 6 ? id + idLen - 6 : id);
   for (char *p = g_host; *p; p++) *p = (char)tolower(*p);
+}
+
+static void noSleep() {
+#if defined(ESP8266)
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#else
+  WiFi.setSleep(false);
+#endif
 }
 
 static void startServer() {
@@ -56,7 +74,7 @@ bool wifiBeginAP(MCUi *bench, const char *ssid, const char *password) {
   }
   WiFi.mode(WIFI_AP);
   bool ok = WiFi.softAP(ssid, password);
-  WiFi.setSleep(false);
+  noSleep();
   startServer();
   if (dbg) {
     if (ok) {
@@ -73,13 +91,17 @@ bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char
   makeHostName(bench);
 
   if (ssid) {
+#if defined(ESP8266)
+    WiFi.hostname(g_host);
+#else
     WiFi.setHostname(g_host);
+#endif
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
     WiFi.begin(ssid, password);
   }
   // No power saving: shorter delays for commands from the app
-  WiFi.setSleep(false);
+  noSleep();
 
   startServer();
 
@@ -94,6 +116,9 @@ bool wifiBegin(MCUi *bench, const char *deviceName, const char *ssid, const char
 
 void wifiPoll(MCUi *bench) {
   if (!g_server) return;
+#if defined(ESP8266)
+  if (g_mdns) MDNS.update();
+#endif
   Print *dbg = bench->_debugOut();
 
   // Network up or down
@@ -119,6 +144,7 @@ void wifiPoll(MCUi *bench) {
   // Signal strength to the router as mDNS TXT record "rssi", so the app can show it
   // in the device list (only in an existing network; in access point mode the phone
   // measures the signal itself)
+#if defined(ESP32)
   if (g_mdns && !g_apMode && up && millis() - g_lastRssiTxt > 5000) {
     g_lastRssiTxt = millis();
     char buf[8];
@@ -127,6 +153,7 @@ void wifiPoll(MCUi *bench) {
     const char *rssi = buf;
     MDNS.addServiceTxt("mcui", "tcp", "rssi", rssi);
   }
+#endif
 
   // New app connection. It replaces an older one, e.g. after the phone lost Wi-Fi.
   WiFiClient incoming = acceptClient();
@@ -174,3 +201,14 @@ void wifiSend(const char *line, size_t len) {
 }
 
 }  // namespace mcui_internal
+
+#else  // no built-in Wi-Fi (AVR, STM32, ...): use an ESP-01 bridge with beginSerial()
+
+namespace mcui_internal {
+bool wifiBegin(MCUi *, const char *, const char *, const char *) { return false; }
+bool wifiBeginAP(MCUi *, const char *, const char *) { return false; }
+void wifiPoll(MCUi *) {}
+void wifiSend(const char *, size_t) {}
+}  // namespace mcui_internal
+
+#endif

@@ -10,7 +10,20 @@
 #include <string.h>
 #include <stdlib.h>
 
+// The receive buffer is filled by the Bluetooth task on ESP32, so it needs a lock
+// there. All other connections are read in update(), on the same thread.
+#if defined(ESP32)
 static portMUX_TYPE g_mux = portMUX_INITIALIZER_UNLOCKED;
+#define MCUI_LOCK() portENTER_CRITICAL(&g_mux)
+#define MCUI_UNLOCK() portEXIT_CRITICAL(&g_mux)
+#else
+#define MCUI_LOCK() \
+  do {          \
+  } while (0)
+#define MCUI_UNLOCK() \
+  do {            \
+  } while (0)
+#endif
 
 // ---------------------------------------------------------------- helpers
 
@@ -23,12 +36,49 @@ static void appendf(char *buf, size_t size, const char *fmt, ...) {
   va_end(args);
 }
 
+// Numbers to text. AVR (Uno, Nano, Mega) has no float support in printf,
+// so dtostrf is used there. out must hold at least 24 characters.
 static void formatFloat(char *out, size_t size, float value, uint8_t decimals) {
   if (isnan(value)) {
     snprintf(out, size, "nan");
-  } else {
-    snprintf(out, size, "%.*f", decimals, value);
+    return;
   }
+#if defined(__AVR__)
+  (void)size;
+  dtostrf(value, 1, decimals, out);
+#else
+  snprintf(out, size, "%.*f", decimals, value);
+#endif
+}
+
+// Compact number form: about 6 significant digits, no trailing zeros
+static void formatCompact(char *out, size_t size, float value) {
+  if (isnan(value)) {
+    snprintf(out, size, "nan");
+    return;
+  }
+  float a = fabs(value);
+  int decimals = 0;
+  if (a > 0) {
+    int intDigits = (int)floor(log10(a)) + 1;
+    decimals = 6 - intDigits;
+    if (decimals < 0) decimals = 0;
+    if (decimals > 12) decimals = 12;
+  }
+  formatFloat(out, size, value, (uint8_t)decimals);
+  if (strchr(out, '.')) {
+    size_t n = strlen(out);
+    while (n > 0 && out[n - 1] == '0') out[--n] = 0;
+    if (n > 0 && out[n - 1] == '.') out[--n] = 0;
+  }
+  if (strcmp(out, "-0") == 0) strcpy(out, "0");
+}
+
+// Appends ";name=value" in compact number form
+static void appendNum(char *line, size_t size, const char *name, float value) {
+  char num[24];
+  formatCompact(num, sizeof(num), value);
+  appendf(line, size, ";%s=%s", name, num);
 }
 
 static uint8_t decimalsForStep(float step) {
@@ -54,16 +104,46 @@ MCUi::MCUi() {
 void MCUi::initCommon(const char *deviceName, Link link) {
   _name = deviceName;
   _link = link;
+  if (_idSet) return;
+#if defined(ESP32)
   uint64_t mac = ESP.getEfuseMac();
-  snprintf(_id, sizeof(_id), "%04X%08X", (unsigned)(uint16_t)(mac >> 32), (unsigned)(uint32_t)mac);
+  snprintf(_id, sizeof(_id), "%04X%08lX", (unsigned)(uint16_t)(mac >> 32), (unsigned long)(uint32_t)mac);
+#elif defined(ESP8266)
+  snprintf(_id, sizeof(_id), "%06lX%06lX", (unsigned long)(ESP.getChipId() & 0xFFFFFF),
+           (unsigned long)(ESP.getFlashChipId() & 0xFFFFFF));
+#elif defined(ARDUINO_ARCH_STM32)
+  uint32_t w0 = HAL_GetUIDw0(), w1 = HAL_GetUIDw1(), w2 = HAL_GetUIDw2();
+  snprintf(_id, sizeof(_id), "%04X%08lX", (unsigned)((w0 ^ w2) & 0xFFFF), (unsigned long)w1);
+#else
+  // No readable chip ID: a hash of the device name (stays the same as long as the name does)
+  uint32_t h = 2166136261UL;
+  for (const char *p = deviceName; p && *p; p++) {
+    h ^= (uint8_t)*p;
+    h *= 16777619UL;
+  }
+  snprintf(_id, sizeof(_id), "4D43%08lX", (unsigned long)h);
+#endif
+}
+
+void MCUi::setDeviceId(const char *id) {
+  strncpy(_id, id, sizeof(_id) - 1);
+  _id[sizeof(_id) - 1] = 0;
+  _idSet = true;
 }
 
 bool MCUi::begin(const char *deviceName) {
   initCommon(deviceName, LINK_BLE);
   bool ok = mcui_internal::bleBegin(this, deviceName);
   if (_debug) {
-    if (ok) _debug->printf("MCUi: Bluetooth LE ready, advertising as \"%s\" (ID %s)\n", deviceName, _id);
-    else _debug->println("MCUi: this board has no Bluetooth LE");
+    if (ok) {
+      _debug->print(F("MCUi: Bluetooth LE ready, advertising as \""));
+      _debug->print(deviceName);
+      _debug->print(F("\" (ID "));
+      _debug->print(_id);
+      _debug->println(')');
+    } else {
+      _debug->println(F("MCUi: this board has no built-in Bluetooth LE. Use a module with beginSerial()."));
+    }
   }
   return ok;
 }
@@ -72,8 +152,13 @@ bool MCUi::beginClassic(const char *deviceName) {
   initCommon(deviceName, LINK_CLASSIC);
   bool ok = mcui_internal::classicBegin(this, deviceName);
   if (_debug) {
-    if (ok) _debug->printf("MCUi: Bluetooth Classic ready as \"%s\" (ID %s). Pair it in the Android Bluetooth settings.\n", deviceName, _id);
-    else _debug->println("MCUi: this board has no Bluetooth Classic (only the classic ESP32 has it)");
+    if (ok) {
+      _debug->print(F("MCUi: Bluetooth Classic ready as \""));
+      _debug->print(deviceName);
+      _debug->println(F("\". Pair it in the Android Bluetooth settings."));
+    } else {
+      _debug->println(F("MCUi: this board has no built-in Bluetooth Classic (only the classic ESP32 has it). Use a module with beginSerial()."));
+    }
   }
   return ok;
 }
@@ -85,6 +170,21 @@ bool MCUi::beginWiFi(const char *deviceName, const char *ssid, const char *passw
 
 bool MCUi::beginWiFi(const char *deviceName) {
   return beginWiFi(deviceName, nullptr, nullptr);
+}
+
+bool MCUi::beginSerial(Stream &port, const char *deviceName) {
+  initCommon(deviceName, LINK_SERIAL);
+  _serial = &port;
+  // A serial module cannot tell whether the app is connected. The device sends
+  // all the time; when the app connects, it asks for the announcement (HELLO).
+  _connected = true;
+  _connectEvent = true;
+  if (_debug) {
+    _debug->print(F("MCUi: serial connection ready as \""));
+    _debug->print(deviceName);
+    _debug->println('"');
+  }
+  return true;
 }
 
 bool MCUi::beginWiFiAP(const char *deviceName, const char *password, const char *ssid) {
@@ -199,7 +299,7 @@ bool MCUi::addNumber(const char *key, const char *name, float min, float max, fl
   c.min = min;
   c.max = max;
   c.unit = unit;
-  snprintf(c.value, sizeof(c.value), "%g", initial);
+  formatCompact(c.value, sizeof(c.value), initial);
   return true;
 }
 
@@ -299,7 +399,7 @@ void MCUi::setText(const char *key, const char *text) {
 
 void MCUi::event(const char *text) {
   if (!_announced) return;
-  char line[160];
+  char line[MCUI_OUT_LINE];
   snprintf(line, sizeof(line), "EVT:%s", text);
   sendLine(line);
 }
@@ -319,20 +419,32 @@ void MCUi::_onDisconnect() {
 }
 
 void MCUi::_onReceive(const uint8_t *data, size_t len) {
-  portENTER_CRITICAL(&g_mux);
+  MCUI_LOCK();
   for (size_t i = 0; i < len; i++) {
     uint16_t next = (_rxHead + 1) % RX_SIZE;
     if (next == _rxTail) break; // buffer full
     _rx[_rxHead] = data[i];
     _rxHead = next;
   }
-  portEXIT_CRITICAL(&g_mux);
+  MCUI_UNLOCK();
 }
 
 void MCUi::update() {
   // Classic and Wi-Fi are polled here, Bluetooth LE uses callbacks
-  if (_link == LINK_CLASSIC) mcui_internal::classicPoll(this);
-  else if (_link == LINK_WIFI) mcui_internal::wifiPoll(this);
+  if (_link == LINK_CLASSIC) {
+    mcui_internal::classicPoll(this);
+  } else if (_link == LINK_WIFI) {
+    mcui_internal::wifiPoll(this);
+  } else if (_link == LINK_SERIAL && _serial) {
+    uint8_t buf[16];
+    size_t n = 0;
+    while (_serial->available() > 0 && n < sizeof(buf)) {
+      int c = _serial->read();
+      if (c < 0) break;
+      buf[n++] = (uint8_t)c;
+    }
+    if (n > 0) _onReceive(buf, n);
+  }
 
   uint32_t now = millis();
 
@@ -344,23 +456,23 @@ void MCUi::update() {
       _helloSeen = false;
       _chunk = 20;
       _lineLen = 0;
-      if (_debug) _debug->println("MCUi: app connected");
+      if (_debug && _link != LINK_SERIAL) _debug->println(F("MCUi: app connected"));
     } else {
       _announced = false;
-      if (_debug) _debug->println("MCUi: app disconnected, waiting for the app");
+      if (_debug) _debug->println(F("MCUi: app disconnected, waiting for the app"));
     }
   }
 
   // Received bytes into lines
   while (true) {
     uint8_t b;
-    portENTER_CRITICAL(&g_mux);
+    MCUI_LOCK();
     bool empty = _rxHead == _rxTail;
     if (!empty) {
       b = _rx[_rxTail];
       _rxTail = (_rxTail + 1) % RX_SIZE;
     }
-    portEXIT_CRITICAL(&g_mux);
+    MCUI_UNLOCK();
     if (empty) break;
 
     if (b == '\n') {
@@ -391,7 +503,7 @@ void MCUi::handleLine(char *line) {
       _chunk = (uint16_t)chunk;
     }
     _helloSeen = true;
-    if (_debug) _debug->printf("MCUi: HELLO from app, packet size %u\n", _chunk);
+    if (_debug) _debug->println(F("MCUi: app connected (HELLO)"));
     sendAnnouncement();
     return;
   }
@@ -428,7 +540,7 @@ void MCUi::handleLine(char *line) {
       if (strcmp(c->type, "slider") == 0) {
         formatFloat(c->value, sizeof(c->value), f, decimalsForStep(c->step));
       } else {
-        snprintf(c->value, sizeof(c->value), "%g", f);
+        formatCompact(c->value, sizeof(c->value), f);
       }
     } else if (strcmp(c->type, "select") == 0) {
       // Check that the value is one of the options
@@ -460,7 +572,7 @@ void MCUi::handleLine(char *line) {
 }
 
 void MCUi::sendAnnouncement() {
-  char line[320];
+  char line[MCUI_OUT_LINE];
 
   snprintf(line, sizeof(line), "DEV:id=%s;name=%s;proto=%d", _id, _name, MCUI_PROTOCOL_VERSION);
   if (_firmware) appendf(line, sizeof(line), ";fw=%s", _firmware);
@@ -470,12 +582,18 @@ void MCUi::sendAnnouncement() {
     Channel &c = _channels[i];
     snprintf(line, sizeof(line), "CH:key=%s;name=%s;type=%s", c.key, c.name ? c.name : c.key, c.type);
     if (c.unit) appendf(line, sizeof(line), ";unit=%s", c.unit);
-    if (c.hasRange) appendf(line, sizeof(line), ";min=%g;max=%g", c.min, c.max);
+    if (c.hasRange) {
+      appendNum(line, sizeof(line), "min", c.min);
+      appendNum(line, sizeof(line), "max", c.max);
+    }
     if (c.decimals != 255) appendf(line, sizeof(line), ";dec=%u", c.decimals);
     if (c.group) appendf(line, sizeof(line), ";group=%s", c.group);
     if (c.page) appendf(line, sizeof(line), ";page=%u", c.page);
     if (c.setpointOf) appendf(line, sizeof(line), ";role=setpoint;of=%s", c.setpointOf);
-    if (c.hasAlarm) appendf(line, sizeof(line), ";alarm_lo=%g;alarm_hi=%g", c.alarmLow, c.alarmHigh);
+    if (c.hasAlarm) {
+      appendNum(line, sizeof(line), "alarm_lo", c.alarmLow);
+      appendNum(line, sizeof(line), "alarm_hi", c.alarmHigh);
+    }
     sendLine(line);
   }
 
@@ -483,9 +601,12 @@ void MCUi::sendAnnouncement() {
     Control &c = _controls[i];
     snprintf(line, sizeof(line), "CTL:key=%s;name=%s;type=%s", c.key, c.name ? c.name : c.key, c.type);
     if (strcmp(c.type, "slider") == 0) {
-      appendf(line, sizeof(line), ";min=%g;max=%g;step=%g", c.min, c.max, c.step);
+      appendNum(line, sizeof(line), "min", c.min);
+      appendNum(line, sizeof(line), "max", c.max);
+      appendNum(line, sizeof(line), "step", c.step);
     } else if (strcmp(c.type, "number") == 0) {
-      appendf(line, sizeof(line), ";min=%g;max=%g", c.min, c.max);
+      appendNum(line, sizeof(line), "min", c.min);
+      appendNum(line, sizeof(line), "max", c.max);
     } else if (strcmp(c.type, "select") == 0 && c.options) {
       appendf(line, sizeof(line), ";options=%s", c.options);
     }
@@ -511,7 +632,7 @@ void MCUi::sendAnnouncement() {
 
 void MCUi::sendNow() {
   if (!_connected || !_announced) return;
-  char line[512];
+  char line[MCUI_OUT_LINE];
   line[0] = 0;
   char num[24];
   for (uint8_t i = 0; i < _channelCount; i++) {
@@ -535,6 +656,12 @@ void MCUi::sendLine(const char *line) {
     case LINK_BLE: mcui_internal::bleSend(line, len, _chunk); break;
     case LINK_CLASSIC: mcui_internal::classicSend(line, len); break;
     case LINK_WIFI: mcui_internal::wifiSend(line, len); break;
+    case LINK_SERIAL:
+      if (_serial) {
+        _serial->write((const uint8_t *)line, len);
+        _serial->write((uint8_t)'\n');
+      }
+      break;
     default: break;
   }
 }
