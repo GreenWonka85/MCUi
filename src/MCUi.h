@@ -4,14 +4,16 @@
   Protocol: docs/PROTOCOL.md
   License:  MIT
 
-  Version 0.4: connections
+  Version 0.5: connections
 
     begin("Name")                     Bluetooth LE      ESP32, -S3, -C3, -C6; with ArduinoBLE:
                                                         Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi,
                                                         Nano RP2040 Connect
     beginClassic("Name")              Bluetooth         ESP32 only (Android only)
-    beginWiFi("Name", ssid, password) Wi-Fi (network)   ESP32 (all), ESP8266, Pico W
-    beginWiFiAP("Name", password)     Wi-Fi (own net)   ESP32 (all), ESP8266, Pico W
+    beginWiFi("Name", ssid, password) Wi-Fi (network)   ESP32 (all), ESP8266, Pico W; with
+                                                        WiFiS3/WiFiNINA: UNO R4 WiFi, Nano 33 IoT,
+                                                        Nano RP2040 Connect, MKR WiFi 1010
+    beginWiFiAP("Name", password)     Wi-Fi (own net)   same boards as beginWiFi
     beginSerial(port, "Name")         any serial module every board: Arduino Uno/Nano/Mega,
                                       (BT-06, HC-05,    STM32, RP2040, ... with a Bluetooth
                                       ESP-01 bridge)    module or an ESP-01 as Wi-Fi bridge
@@ -92,7 +94,7 @@
 #endif
 
 #define MCUI_PROTOCOL_VERSION 1
-#define MCUI_LIBRARY_VERSION "0.4.0"
+#define MCUI_LIBRARY_VERSION "0.5.0"
 
 #ifndef MCUI_WIFI_PORT
 #define MCUI_WIFI_PORT 4210
@@ -124,6 +126,8 @@ public:
   /**
    * Wi-Fi: connects to your network and waits for the app on TCP port 4210.
    * The app finds the device automatically (mDNS) or by its IP address.
+   * UNO R4 WiFi, Nano 33 IoT, Nano RP2040 Connect, MKR WiFi 1010: #include <WiFiS3.h> or
+   * <WiFiNINA.h> before <MCUi.h>; for mDNS also install and include ArduinoMDNS.
    */
   bool beginWiFi(const char *deviceName, const char *ssid, const char *password);
 
@@ -131,8 +135,9 @@ public:
   bool beginWiFi(const char *deviceName);
 
   /**
-   * Wi-Fi access point: the ESP32 opens its own network, no router needed.
-   * Connect the phone to this network; the app reaches the ESP32 at 192.168.4.1.
+   * Wi-Fi access point: the board opens its own network, no router needed.
+   * Connect the phone to this network; the app recognizes the device automatically
+   * (address 192.168.4.1).
    * password: at least 8 characters, or nullptr for an open network.
    * ssid: network name, default is the device name.
    */

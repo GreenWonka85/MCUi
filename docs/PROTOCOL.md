@@ -226,7 +226,10 @@ Serial Port Profile (SPP), UUID `00001101-0000-1000-8000-00805F9B34FB`. Same lin
 - Discovery via mDNS (DNS-SD): service `_mcui._tcp`, instance name = device name,
   TXT records `id` (device ID), `name` and, in an existing network, `rssi`
   (signal strength to the router in dBm, updated every 5 s). Host name `mcui-<last 6 hex digits of the ID>`.
-- If mDNS is blocked by the network, the app connects by IP address.
+- In access point mode the app finds the device without mDNS: it connects to the router
+  address of the phone's Wi-Fi on port `4210`, sends `HELLO` and reads the `DEV:` line.
+- If mDNS is blocked by the network or not available on the device (Arduino boards with
+  WiFiS3/WiFiNINA without the library ArduinoMDNS), the app connects by IP address.
 - Same lines as above, no packet size limit.
 - The app sends `PING` every 3 s. If no line arrives for 10 s, the app treats
   the connection as lost and reconnects.

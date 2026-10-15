@@ -4,7 +4,7 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
 
 *Deutsch: siehe unten.*
 
-## Features (version 0.3)
+## Features (version 0.5)
 
 - Works with (almost) every board:
 
@@ -15,9 +15,10 @@ Arduino library for the **MCU Instruments** app (short: MCUi): show measurements
   | ESP32 (classic) | Bluetooth Classic built in (Android) | `beginClassic("Name")` |
   | ESP32 (all), ESP8266 (NodeMCU, Wemos D1 mini, ESP-01), Raspberry Pi Pico W | Wi-Fi in your network | `beginWiFi("Name", ssid, password)` |
   | ESP32 (all), ESP8266, Raspberry Pi Pico W | own Wi-Fi network (192.168.4.1) | `beginWiFiAP("Name", password)` |
+  | UNO R4 WiFi, Nano 33 IoT, Nano RP2040 Connect, MKR WiFi 1010, UNO WiFi Rev2 | own Wi-Fi network or your network | `#include <WiFiS3.h>` or `<WiFiNINA.h>` (and optionally `<ArduinoMDNS.h>`), then `beginWiFiAP(...)` or `beginWiFi(...)` |
   | Arduino Uno, Nano, Mega, Leonardo, STM32, RP2040, ... | Bluetooth LE module (HM-10, AT-09), Bluetooth module (BT-06, HC-05, HC-06) or ESP-01 as Wi-Fi bridge | `beginSerial(port, "Name")` |
 
-- Wi-Fi is found automatically (mDNS); the app also connects by IP address.
+- Wi-Fi is found automatically: in the device's own network directly, in your network via mDNS (UNO R4 WiFi and WiFiNINA boards: with the library ArduinoMDNS). The app also connects by IP address.
 - Up to 24 channels (8 on Uno/Nano/Mega because of their small RAM): voltage, current, temperature, humidity, pressure and [many more types](docs/PROTOCOL.md#5-channel-types)
 - Power supply display with setpoints and CV/CC indicator, dual power supplies via groups
 - Controls in the app: switch, button, slider, number input, selection list
@@ -66,6 +67,7 @@ Open the MCU Instruments app, tap *Search*, select "My Voltmeter". Done.
 | `07_ESP01_WLAN_Bruecke` | Sketch for an ESP-01: turns it into a Wi-Fi module for any board |
 | `08_Arduino_mit_Funkmodul` | Uno/Nano/Mega/STM32 voltmeter with HM-10, BT-06 or ESP-01, incl. wiring |
 | `09_ArduinoBLE_Voltmeter` | Voltmeter for Nano 33 BLE/IoT, UNO R4 WiFi, Nano RP2040 Connect |
+| `10_Arduino_WLAN` | Voltmeter over Wi-Fi for UNO R4 WiFi, Nano 33 IoT, Nano RP2040 Connect, MKR WiFi 1010 |
 
 ## API overview
 
@@ -107,9 +109,9 @@ Arduino-Bibliothek für die App **MCU Instruments** (kurz MCUi): Messwerte vom M
 
 **Erste Schritte:** Beispiel `01_Voltmeter` öffnen, hochladen, in der App auf *Suchen* tippen und das Gerät wählen.
 
-**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32 und dem ESP8266. Der Raspberry Pi Pico W kann ebenfalls WLAN. Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi und Nano RP2040 Connect nutzen Bluetooth LE über die Bibliothek ArduinoBLE (`#include <ArduinoBLE.h>` vor `<MCUi.h>`, Beispiel 09). Alle anderen Boards (Arduino Uno, Nano, Mega, STM32 ...) nutzen `beginSerial(port, "Name")` mit einem Funkmodul: HM-10 oder AT-09 (Bluetooth LE), BT-06 oder HC-05 (Bluetooth Classic) oder ESP-01 als WLAN-Brücke (Beispiele 07 und 08).
+**Verbindung:** `begin("Name")` für Bluetooth LE, `beginClassic("Name")` für Bluetooth Classic (nur klassischer ESP32, nur Android), `beginWiFi("Name", ssid, passwort)` für WLAN im vorhandenen Netz, `beginWiFiAP("Name", passwort)` für ein eigenes WLAN des ESP32 (IP 192.168.4.1, kein Router nötig). Beides auf allen ESP32 und dem ESP8266. Der Raspberry Pi Pico W kann ebenfalls WLAN. UNO R4 WiFi, Nano 33 IoT, Nano RP2040 Connect, MKR WiFi 1010 und UNO WiFi Rev2 können WLAN über ihre WLAN-Bibliothek (`#include <WiFiS3.h>` bzw. `<WiFiNINA.h>` vor `<MCUi.h>`, Beispiel 10). Im eigenen Netz erkennt die App das Gerät automatisch, im vorhandenen WLAN mit der zusätzlichen Bibliothek ArduinoMDNS, sonst per IP-Adresse. Nano 33 BLE, Nano 33 IoT, UNO R4 WiFi und Nano RP2040 Connect nutzen Bluetooth LE über die Bibliothek ArduinoBLE (`#include <ArduinoBLE.h>` vor `<MCUi.h>`, Beispiel 09). Alle anderen Boards (Arduino Uno, Nano, Mega, STM32 ...) nutzen `beginSerial(port, "Name")` mit einem Funkmodul: HM-10 oder AT-09 (Bluetooth LE), BT-06 oder HC-05 (Bluetooth Classic) oder ESP-01 als WLAN-Brücke (Beispiele 07 und 08).
 
-**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic, ESP-01 als WLAN-Brücke, Arduino mit Funkmodul, Boards mit ArduinoBLE.
+**Beispiele:** Voltmeter, Labornetzteil (simuliert, mit CV/CC), Temperaturen mit DS18B20, Bedienelemente (Schalter, Schieberegler, Auswahl, Taster), Voltmeter über WLAN, Bluetooth Classic, ESP-01 als WLAN-Brücke, Arduino mit Funkmodul, Boards mit ArduinoBLE, Arduino-Boards mit WLAN.
 
 **Wichtig:** Schlüssel, Namen, Einheiten und Optionslisten werden als Zeiger gespeichert. Bitte Zeichenketten-Literale (`"V"`) oder globale bzw. statische Puffer verwenden, keine temporären `String`-Objekte.
 
